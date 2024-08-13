@@ -1,0 +1,10 @@
+{
+    "iface_name": "enp5s0",
+    "default_stb_ip": "192.168.123.14",
+    "default_stb_port": "8080",
+    "default_cid": "1004",
+    "default_stb": "XIP712-1",
+    "com_port": "COM38",
+    "stbs": {
+    }
+}

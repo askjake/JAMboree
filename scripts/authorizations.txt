@@ -1,0 +1,29 @@
+{
+    "HEVC211-10": [
+        "VF-Test2 right is authorized.",
+        "the STB has H6 authorization"
+    ],
+    "ZIP1018-6": [],
+    "ZIP1018-5": [],
+    "HEVC211-7": [],
+    "HEVC211-8": [],
+    "XIP712-1": [],
+    "XIP712-2": [],
+    "XIP712-3": [],
+    "ZIP1018-4": [],
+    "HEVC211-9": [],
+    "ZIP1018-11": [],
+    "XIP712-12": [],
+    "HEVC211-13": [],
+    "ZIP1018-14": [],
+    "XIP712-15": [],
+    "HECV211-16": [],
+    "bedroom": [
+        "VF-Test2 right is authorized.",
+        "Netflix right is enabled.",
+        "the STB has H6 authorization",
+        "Youtube right is enabled.",
+        "Amazon Prime right is enabled."
+    ],
+    "Living room": []
+}

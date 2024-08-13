@@ -1,0 +1,5 @@
+[AutoRun]
+label=Jakes JAMboree
+icon=YourIcon.ico
+open=BOOM.bat
+action=Run BOOM.bat

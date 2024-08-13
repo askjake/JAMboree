@@ -1,0 +1,120 @@
+Set of scripts used in STB development process
+Includes set of script for sending SGS commands to the STB
+
+These scripts optimizes or speed up some operations with STB, like flash new image or test SGS command
+
+
+Content
+ - bashrc/            - installer of bash environment with set of scripts for CC and work with sources
+
+ - sgs.py             - make a single SGS querry (require python3)
+ - sgs_pair.py        - pair your PC to STB (required for test Async Events) (require python3)
+ - sgs_ae.py          - contineously print AE received from STB (require python3)
+ - get_mdu_mode.py    - get STB mode: SAT/IP/IP_SSM
+ - get_multicasts.py  - get list of opened multicasts
+ - set_mdu_mode.py    - set STB mode: SAT/IP/IP_SSM
+
+ - stb_getlogs        - copy logs from STb to NFS share
+ - stb_grep           - connect to STB and filter specific logs to console
+ - stb_mount          - mount NFS on STB
+ - stb_update         - flash STB
+ - tnet_nfs           - run STB from NFS
+
+ - sgs_lib.py         - NOT a command. Just library used by other scripts
+
+Install
+$ cd <path-where-you-going-to-store-scripts>
+$ git clone git@git.dtc.dish.corp:kulapet/scripts.git
+$ cd scripts
+$ ./install.sh
+this will update PATH env variable - adds path to downloaded 
+
+    
+
+Usage
+Each sgs script usage details are described in script header
+sgs_*.py has help, use -h option
+
+
+
+-----------------------
+Brief desctiption
+
+sgs.py 
+ sends a single SGS querry and print responce
+ Note, this command does not require setting 'cid' and 'receiver' fields. If not set then default used
+
+ Usage
+  sgs.py [-v] [-i STB_IP] querry
+
+ Example:
+  sgs.py -i 192.168.1.24 '{"command": "monitor_network_if_statistics", "if_id": 3, "enable": true, "interval": 5}'
+
+
+
+
+sgs_pair.py
+ Runs Pair process like a remote. Will require user to enter PIN.
+
+ Usage
+  sgs_pair.py [-v] [-i STB_IP] stb_receiver_id
+
+ Example:
+  sgs.py -i 192.168.1.24  R1911705054-56
+
+
+
+
+sgs_ae.py
+ connects to STB and prints AE events from it. May filter out specified AE
+ NOTE!! run sgs_pair.py prior to sgs_ae.py. It is ok to run sgs_pair.py only once for PC
+ TODO - it is not implemented 'subscribe' mechanism so some events may not work as expected
+
+ Usage
+  sgs_ae.py [-v] [-i STB_IP] [-s stb_receiver_id] [event [event ...]]
+
+ Example:
+  sgs_ae.py -i 192.168.1.24  -s R1911705054-56
+  sgs_ae.py -i 192.168.1.24  -s R1911705054-56 AE_NET_IF_STATISTICS
+
+
+-------------------------------
+STB base.
+This set of scripts contain 'base.txt' that contain all information about frequently used STBs.
+It is possible to fill all STB info (like it's ReceiverID, IP address, login/password for https connection)
+and then just specify STB by name. 
+Example:
+  $ get_mdu_mode.py -n stb4
+  will read 'base.txt', finad an instance with 'stb4' name and use it's params
+
+Note, the file also contain 'default_stb' field that specify which stb's info will be used for any sgs command when name not specified.
+
+
+Example of base file:
+
+{
+  "iface_name": "eth1",
+  "default_stb_ip": "192.168.123.14",
+  "default_stb_port": "8080",
+  "default_stb": "stb4",
+  "stbs": {
+    "stb1": {
+      "stb": "R1886471350-71",
+      "ip": "192.168.123.11"
+    },
+    "rstb48": {
+      "stb": "R1956334998-07",
+      "prod": true,
+      "ip": "172.20.31.48",
+      "lname": "v0001_client_93af13033f89e3c9738c8d30aafbf89f5f3e76cf",
+      "passwd": "8b413dcfb17edc061a227af637020afa2e0fcc2e"
+    },
+    "hopper2": {
+      "stb": "R1886471175-94",
+    },
+    "joey": {
+      "stb": "R1883820864-76",
+      "ip": "192.168.1.24"
+    }
+  }
+}

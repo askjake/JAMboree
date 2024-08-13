@@ -1,0 +1,559 @@
+#!/bin/bash
+
+# This is a set of bash scripts and aliasses taht helps using CC and Git and simplifies dev process
+#
+# req
+#    used ctags: Exuberant Ctags 5.8 (http://ctags.sourceforge.net)
+
+export MYDIR=/ccshare/linux/c_files/$USER
+export BIN_DIR=$MYDIR/bin
+
+export LC_ALL=en_US.UTF-8
+export LANG=en_US.UTF-8
+
+EDITOR=vim
+DIFFTOOL=vimdiff
+
+## CC to Git alias:
+alias getln='find . -type l -exec ls -l {} \; 2>/dev/null|grep "\/vobs"|sed "s/^.*\.\//\.\//"'
+
+#########################
+# general scripts and aliases
+alias r='sgs_remote.py'
+alias edmy='vi $SCRIPTDIR/bashrc_local'
+alias myreset='. $SCRIPTDIR/bashrc_local'
+
+# connect to my Linux PC
+LIN="${USER}@10.203.97.131:"
+alias getlin='ssh ${LIN%:}'
+
+# test station
+LAB="${USER}@10.79.97.55:"
+alias getlab='ssh ${LAB%:}'
+
+# search for word in all files and folders in current dir
+alias fw='grep -a -R ./ --color -n -e'
+
+# search for word in all C source and headers files and folders in current dir
+alias fws='grep -a -R ./ --include="*.[ch]" --include="*.cpp" --include="*.java" --color -n -e'
+
+# search for word in all C source and headers files and folders in current dir
+alias fwh='grep -a -R ./ --include="*.h" --color -n -e'
+
+# search through Makefiles (*.mk')
+alias fwm='grep -a -R ./ --include="*.mk" --include="Makefile" --include="makefile" --color -n -e'
+
+# pretty JSON output
+alias jpretty='python3 -m json.tool'
+
+# UTC dater
+alias utc='date -u +%d-%b-%Y.%RUTC'
+
+# generate tags
+alias tg='make_tags'
+alias tgl='ctags --languages=C,C++ --c++-kinds=+p --fields=+iaS --extra=+q -R'
+
+# build error location
+BERR=/ccshare/linux/c_files/MantisBuildErrorLogs/
+alias cder='cd $BERR'
+#####################################################################################
+# make_tags()
+#
+# generate tags in current dir. use ~/ctags_files for -L option
+#
+# Prototype:
+#    make_tags [path1 ...]
+#
+# Parameters
+#    path1 ... - path to file or dir to generate tags for
+#
+#####################################################################################
+function make_tags()
+{
+    local tags_dirs
+    if [[ $(pwd) == /vobs* ]]
+    then
+        #echo CC location
+        #tags_file=~/ctags_files
+        tags_dirs="/vobs/modules/security/include /vobs/modules/os_shell/public/ /vobs/modules/es_utilities/public/ /vobs/src_tree/app/include/ /vobs/modules/remote_client/public_include /vobs/modules/av/public_include/ /vobs/modules/session_mgr/include/"
+    else
+        #echo Git location
+        #tags_file=~/ctags_files_git
+	tags_dirs=""
+    fi
+    #echo "ctags -R -l C -l C++ --c++-kinds=+p --fields=+iaS --extra=+q -L $tags_file $@"
+    #ctags -R -l C -l C++ --c++-kinds=+p --fields=+iaS --extra=+q -L $tags_file $@
+    #echo $@
+    #ctags --c-kinds=+p $(find . $tags_dirs  $@ -name '*.[ch]')
+    ctags --c-kinds=+p -R $tags_dirs . $@ 2>/dev/null
+}
+
+alias edtmp='vi $TMP_FILE_LOCATION'
+alias cattmp='cat $TMP_FILE_LOCATION'
+
+alias cdb='cd /vobs/build/'
+
+# copy binary file to nfs location and/or take it back
+alias binsend='cp -f /vobs/build/link/appcreate/gandalf_dev_debug.update $BIN_DIR'
+alias binget='cp -f $BIN_DIR/gandalf_dev_debug.update ~/stbmnt'
+
+# print CS vobname in prompt
+if ${use_color} ; then
+  if [[ -z ${CLEARCASE_ROOT} ]]; then
+     PS1='\[\033[01;34m\]\u@\h\[\033[01;34m\] \w \$\[\033[00m\] '
+  else
+     PS1='\[\e[1;35m\]`echo ${CLEARCASE_ROOT} | cut -b 7-`\[\e[0m\]:\w\$ '
+  fi
+fi
+
+###################
+# list the latest CS file for all available platforms
+#   excludes all *_temp files
+###################
+function getlast()
+{
+	#all_platforms="HEVC211 XIP110CR XIP110 XIP112 XIP712 XIP813 XIP913 ZIP1018 ZIP110HEVC ZIP110"
+	all_platforms="HEVC211 XIP110CR XIP110 XIP112 XIP712 XIP813 XIP913 ZIP1018 ZIP110HEVC ZIP110 6500 9500 BCM_ZIP1018 BCM_ZIP110 COPROCV1"
+	default_platform="ZIP1018"
+	platforms=$default_platform
+	prefix="/ccshare/linux/c_files/builds_"
+	default_base="integration"
+	base_available="integration release tip"
+	suffix=""
+	extension="cs"
+	verbose=0
+	omega=0
+	show_help=0
+	full=0
+	args=$(getopt --name $FUNCNAME --unquoted --options "haufvos:b:l:" --longoptions "help,all,full,update,verbose,omega,suffix:,base:,line:" -- "$@") || return 1
+	eval set -- "$args"
+	until [[ $1 == "--" ]]
+	do
+		case $1 in
+			'-h' | '--help' ) show_help=1 ;;
+			'-u' | '--update' ) extension="update" ;;
+			'-f' | '--full' ) full=1 ;;
+			'-a' | '--all' ) platforms=$all_platforms ;;
+			'-v' | '--verbose' ) verbose=1 ;;
+			'-o' | '--omega' ) omega=1 ;;
+			'-b' | '--base' ) base=${2-} ; shift ;;
+			'-s' | '--suffix' ) suffix=${2-} ; shift ;;
+			'-l' | '--line' ) line=${2-} ; shift ;;
+			* ) echo >&2 "error, invalid parameter $1" ; return 1 ;;
+		esac
+		shift
+	done
+	shift
+
+	if (( show_help == 1 ))
+	then
+		echo "this command finds the latest CS file for specified platform"
+		echo ""
+		echo "  usage:"
+		echo "    $FUNCNAME [-h|--help] [-u|--update] [-b|--base] [platformname, ...]"
+		echo ""     
+		echo "  where"
+		echo "     -h | --help     - display this message"
+		echo "     -u | --update    - print update file instead of cs"
+		echo "     -f | --full      - show all files for last date"
+		echo "     -b | --base BASENAME - print the file from specified source ($base_available)"
+		echo "     -s | --suffix SUFFIX - print the file with SUFFIX in name"
+		echo "     -l | --line LINEITEM - grep cs file by lineitem"
+		echo ""     
+		return 0
+	fi
+
+	location=$prefix${base-$default_base}
+
+	if [ ! -d $location ]
+	then
+		echo >&2 "$location"
+		echo >&2 "wrong base $base, use one of $base_available"
+		return 1
+	fi
+	[ $verbose == 1 ] && echo "location: $location"
+
+	platforms=${@-$platforms}
+	
+	[ $verbose == 1 ] && echo "platforms: $platforms"
+	for box in $platforms
+	do
+		#local p=$location/$box/
+		local p=$location/$box/${box}_
+		if [ $omega == 1 ]
+		then
+			#p=/ccshare/linux/c_files/OTT_builds/teams/staging/${box}_staging_omega_
+			p=/ccshare/linux/c_files/OTT_builds/teams/staging/${box}_
+		fi
+
+		if [ -d ${p%/*} ]
+		then
+			if [ $full == 1 ]
+			then
+				#local_path=$(ls -t $p*.cs | sed '/_temp/d' | head -1)
+				local_path=$(ls -t $p*$suffix*.cs | sed '/_temp/d' | head -1)
+				ls -1 ${local_path%.cs}*
+			else
+				#ls -t $p*.$extension | sed '/_temp/d' | head -1
+				ls -t $p*$suffix*.$extension | sed '/_temp/d' | head -1
+			fi
+		else
+			echo "platform $box not found"
+		fi
+	done
+}
+
+# check if build complete for specified list of CS files, check all latest CS if not specified
+function checkbuild()
+{
+	if [[ $@ != "" ]]
+	then
+		files=$@
+	else
+		files=$(getlast -a)
+	fi
+		
+	for file in $files; do  ls ${file%.*}.update; done
+	# $(grep $(getlast -a) -e "NETRA"|cut -d':' -f1)
+}
+
+alias getw='getlast -f -b release ATVWJ4'
+alias getm='getlast -f -b release ATVMJ4'
+alias gets='getlast -f -b release SNAP2'
+alias getb='getlast -f -b release APK_BUNDLE_DEV'
+alias getbr='getlast -f -b release APK_BUNDLE'
+
+#########################
+# Git
+alias glog='git log --graph --oneline --decorate --all --color'
+alias glogn='git --no-pager log --graph --oneline --decorate --all --color'
+
+alias gfiles='git --no-pager diff --name-only'
+
+#########################
+# CC
+alias lsv='cat  ~/views/list'
+alias catcs='ct catcs'
+alias edcs='ct edcs'
+alias vtree='ct lsvtree -graphical'
+alias lsco="cleartool lsco -cview -avobs -fmt '%n\n'"
+alias edco='vi $(ct lsco -me -recurse -short)'
+alias mcuc='ct uncheckout -rm $(lsco)'
+
+alias getutc='date -u +"-time %d-%b-%Y.%H:%MUTC"'
+
+# make a view or reset existing
+# params <cr> - the CR number
+function mkv()
+{
+	local scriptpath viewname show_help=0 do_reset=0
+
+	# parse args
+	args=$(getopt --name $FUNCNAME --unquoted --options "hr" --longoptions "help,reset" -- "$@") || return 1
+	eval set -- "$args"
+	until [[ $1 == "--" ]]
+	do
+		case $1 in
+			'-h' | '--help' ) show_help=1 ;;
+			'-r' | '--reset' ) do_reset=1 ;;
+			* ) echo >&2 "error, invalid parameter $1" ; return 1 ;;
+		esac
+		shift
+	done
+	shift
+
+	# get script location and viewname..
+	scriptpath=$(ls /ccshare/linux/c_scripts/cr*$@*.pl -t -1|head -1)
+	echo "script location: $scriptpath"
+	viewname=${scriptpath##*create_}
+	viewname=${USER}_${viewname%_view.pl}
+	echo "view name:       $viewname"
+	
+
+	if (( show_help == 1 ))
+	then
+		echo "this command creates or resets view. Automatically enters created view"
+		echo ""
+		echo "  usage:"
+		echo "    $FUNCNAME [-h|--help] [-r|--reset] [-b|--base] [platformname, ...]"
+		echo ""     
+		echo "  where"
+		echo "     -h | --help     - display this message"
+		echo "     -r | --reset    - remove view before creating one"
+		echo ""     
+		return 0
+	fi
+
+	if (( do_reset==1 ))
+	then
+		if [[ ! -d ~/views/$viewname.vws ]]
+		then
+			echo "view $viewname does not exist, nothing to delete.."
+		else
+			ct rmview -tag $viewname || return 1
+		fi
+	fi
+
+	# create view
+	if [[ -d ~/views/$viewname.vws ]]
+	then
+		echo "view $viewname already exists"
+	else
+		$scriptpath && ct setview $viewname
+	fi
+}
+
+# \fn _get_vob_branchname
+# gets vob branchname from CS from commented out line with *rel*LATEST
+# for first project in Configspec marked as:
+#   #element /vobs/modules/ip_tuner/... .../inv_ip_tuner_rel_100/LATEST -mkbranch inv_ip_tuner_cr148811
+function _get_vob_branchname()
+{
+	echo $(catcs|grep "rel.*LATEST"|head -1|sed "s/.*\ \.\.\.\/\(.*\)\/.*/\1/")
+}
+
+# \fn _get_vob_branchname_pwd
+# gets vob branchname for current location
+function _get_vob_branchname_pwd()
+{
+	echo $(cleartool ls -s|head -1|sed 's/.*main\///'|cut -d'/' -f 1)
+}
+
+# \fn _get_cr_branchname
+# gets loca cr branchname CS from commented out line with 'element.*LATEST'
+# for first project in Configspec marked as:
+#    element /vobs/modules/ip_tuner/... .../inv_ip_tuner_cr148811/LATEST
+function _get_cr_branchname()
+{
+	echo $(ct catcs|sed -n 's/^element.*\.\.\.\/\(.*\)\/LATEST.*/\1/p'|head -1)
+}
+
+# \fn labf
+# \brief prints last label for vob in current location
+#
+# the latest version is taken from corresponding file from ccshare like
+#   /ccshare/linux/c_spec/inv_ip_tuner_build_label_rel_100_cs.txt
+#
+function labf()
+{
+	local lname=$(_get_vob_branchname_pwd)
+	#echo $lname
+	local prefix=${lname%%_rel*}
+	local suffix=rel${lname##*_rel}
+	local versionfile="/ccshare/linux/c_spec/${prefix}_build_label_${suffix}_cs.txt"
+	local lastlabel=$(cat $versionfile|cut -d ' ' -f 3)
+	echo  "$lastlabel"
+}
+
+# view filews modified in current CR
+#  (takes first CR branchname from CS)
+function lscr()
+{
+    local branch=$(_get_cr_branchname)
+    #echo $branch
+    #cmd="cleartool find . -type f -branch \"brtype($branch)\" -exec 'echo \$CLEARCASE_PN' 2>/dev/null"
+    cmd="cleartool find .  -branch \"brtype($branch)\" -exec 'echo \$CLEARCASE_PN' 2>/dev/null"
+    #echo $cmd
+    eval $cmd
+}
+
+# review
+function review()
+{
+    local initial
+    for fil in $(lscr)
+    do
+	##initial=$(ct ls -short $fil |sed "s/[0-9]*$//")0
+	initial=$(ct ls -short $fil |sed "s/\(^.*main\/[^\/]*\/\).*/\1LATEST/")
+	echo review $fil $initial
+
+
+        # check if files identical
+	#cmp -s $initial $fil && echo " - no changes in $fil" && continue
+
+        # now compare files
+	# vimdiff prints line like '2 files to edit' to avoid this extra output compare using 'vim' with -c option
+        #echo "review $fil   against $initial"
+	#$DIFFTOOL $initial $fil
+	#vim $initial -c "vert diffsplit $fil"
+	vim $fil -c "vert diffsplit $initial"
+    done
+}
+
+# \fn ctd
+# \brief compare to previous version
+# \param $1 - file to compare
+function ctd()
+{
+	local filename=$1
+	local prev_filename="${filename}@@$(ct describe -predecessor -short $filename)"
+	if [ -z "$(diff $prev_filename $filename)" ]
+	then
+		echo "files identical: $prev_filename $filename"
+	else
+		echo "$DIFFTOOL $prev_filename $filename"
+		$DIFFTOOL $prev_filename $filename
+	fi
+}
+
+# \fn _merge_file
+# \brief mege one file
+# \param $1 - target file that merge to
+# \param $2 - CC full version path of file where changes is taken from (like filename@@/main/inv_branchname_rel_100/14)
+# \param $3 - base file for both $1 and $2
+function _merge_file()
+{
+	local f_to=$1
+	local f_from=$2
+	local f_base=$3
+	local f_orig=${f_to}.orig
+	echo "merge $f_to   from $f_from  (base ${f_base})"
+	if [ -d $f_to ]
+	then
+		cleartool findmerge $f_to -d -fver ${f_from##*@@} -log /dev/null -merge -c "merge $f_from"
+		return $?
+	fi
+	# merge file
+	cleartool co -c "merge $f_from" $f_to 2>&1 > /dev/null
+	cp -f $f_to $f_orig	
+	merge $f_to $f_from $f_base 2>/dev/null
+	if [ $? -ne "0" ]
+	then
+		echo "   conflict merge $f_to"
+		#echo "   vimdiff $f_from $f_to $f_orig"
+		#vimdiff $f_from $f_to $f_orig
+		vim $f_orig -c "vert diffsplit $f_to" -c "vert diffsplit $f_from"
+	fi
+	cleartool mkhlink Merge $f_from $f_to >/dev/null
+}
+
+# fmu
+# findmerge to TIP
+# ct findmerge . -fver .../inv_ip_tuner_rel_100/LATEST -log /dev/null -exec 'echo $CLEARCASE_PN $CLEARCASE_XN_SFX $CLEARCASE_ID_STR $CLEARCASE_XPN $CLEARCASE_F_ID_STR $CLEARCASE_FXPN $CLEARCASE_B_ID_STR'
+# ./ip_tuner_api.h @@ /main/inv_ip_tuner_rel_100/inv_ip_tuner_cr148811/CHECKEDOUT ./ip_tuner_api.h@@/main/inv_ip_tuner_rel_100/inv_ip_tuner_cr148811/CHECKEDOUT /main/inv_ip_tuner_rel_100/15 ./ip_tuner_api.h@@/main/inv_ip_tuner_rel_100/15 /main/inv_ip_tuner_rel_100/14
+# CLEARCASE_PN        ./ip_tuner_api.h
+# CLEARCASE_XN_SFX    @@
+# CLEARCASE_ID_STR    /main/inv_ip_tuner_rel_100/inv_ip_tuner_cr148811/CHECKEDOUT
+# CLEARCASE_XPN       ./ip_tuner_api.h@@/main/inv_ip_tuner_rel_100/inv_ip_tuner_cr148811/CHECKEDOUT
+# CLEARCASE_F_ID_STR  /main/inv_ip_tuner_rel_100/15
+# CLEARCASE_FXPN      ./ip_tuner_api.h@@/main/inv_ip_tuner_rel_100/15
+# CLEARCASE_B_ID_STR  /main/inv_ip_tuner_rel_100/14
+function fmu()
+{
+	#local branchname=$(catcs|grep "rel.*LATEST"|head -1|sed "s/.*\ \.\.\.\/\(.*\)\/.*/\1/")
+	local branchname=$(_get_vob_branchname)
+	echo "merge to $branchname TIP..."
+	#ct findmerge . -log /dev/null -fver .../${branchname}/LATEST -exec '. ~/.bashrc; _merge_file $CLEARCASE_PN $CLEARCASE_FXPN $CLEARCASE_PN$CLEARCASE_XN_SFX$CLEARCASE_B_ID_STR'
+	echo "ct findmerge $(lscr) -log /dev/null -fver .../${branchname}/LATEST -exec '. ~/.bashrc; _merge_file $CLEARCASE_PN $CLEARCASE_FXPN $CLEARCASE_PN$CLEARCASE_XN_SFX$CLEARCASE_B_ID_STR'"
+	ct findmerge $(lscr) -log /dev/null -fver .../${branchname}/LATEST -exec '. ~/.bashrc; _merge_file $CLEARCASE_PN $CLEARCASE_FXPN $CLEARCASE_PN$CLEARCASE_XN_SFX$CLEARCASE_B_ID_STR'
+}
+
+# build using 'make' from CS or command line, save result to 'log' file
+function _make()
+{
+	local res=0
+	echo "make $buildcmd"
+	echo "------------------------------"
+	datestart=$(date +%s)
+	echo "date start: $(date)"
+	echo "------------------------------"
+	echo "make $buildcmd 2>&1"
+	eval make $buildcmd 2>&1
+	#make $buildcmd 2>&1
+	res=$?
+	echo "------------------------------"
+	echo "------------------------------"
+	echo "build complete for command"
+	echo "make $buildcmd"
+	echo "date end: $(date)"
+	dateend=$(date +%s)
+	date --date @$(expr $dateend - $datestart) -u +%H:%M:%S
+	if [ ${res} -eq "0" ]
+	then
+		echo "build PASS"
+	else
+		echo "build FAIL, result = ${res}"
+	fi
+}
+
+function mm()
+{
+	if [ "$#" -eq "0" ]
+	then
+		buildcmd=$(ct catcs|grep -e '#\ *make'|sed "s/^\ *#\ *make//"|head -1)
+	else
+		buildcmd=$@
+	fi
+	_make $buildcmd |tee log
+}
+
+# set view
+function msv()
+{
+	local viewname=""
+	if [ "$#" -eq "0" ]
+	then
+		viewname=$(cat ~/.lastview)
+	else
+		viewname=$(grep ~/views/list -e $@ |head -1|cut -f 1)
+	fi
+	echo "set view $(grep ~/views/list -e $viewname |head -1)"
+	echo "$viewname" > ~/.lastview
+	ct setview $viewname
+}
+
+#########################
+
+#####################################################################################
+# frename()
+#
+# rename files according regexp
+#
+#####################################################################################
+function frename()
+{
+	if [[ $# -le 1 ]]
+	then
+		echo wrong parameters $# $1 $2
+		echo "example:"
+		echo "  frename 's/^.\{0,8\}_//' *log*"
+		return 1
+	fi
+	local rule=$1
+	shift
+	local files=$@
+	echo "rule $rule, files $files"
+
+	for file in $files
+	do
+		new_name=$(echo $file|sed $rule)
+		echo mv $file $new_name
+		mv $file $new_name
+	done
+}
+
+########################
+alias dbs='db -s'
+function db()
+{
+	local db_cmd="mariadb -h 10.76.247.103 -u $USER cr_inverness"
+	local silent=0
+	local options=""
+	if [[ $# -eq 0 ]]
+	then
+		echo "$db_cmd"
+		eval $db_cmd
+		return
+	fi
+	if [[ $1 = "-s" ]]
+	then
+		silent=1
+		options="--batch -s"
+		shift
+	fi
+	if [[ $silent -eq 0 ]]
+	then
+		echo "$@"
+	fi
+	eval $db_cmd $options -e \'"$@"\'
+}

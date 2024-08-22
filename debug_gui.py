@@ -16,7 +16,7 @@ import time
 from tkinterdnd2 import TkinterDnD, DND_FILES
 import pygame
 from translate_script import translate_file
-from dayJAM import SetTopJAM
+from dayJAM import *
 
 
 pygame.mixer.init()

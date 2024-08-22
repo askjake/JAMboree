@@ -1,16 +1,7 @@
 {
     "linux_pc": "10.79.97.129",
     "release_name": "",
-    "settings": [
-        {
-            "stb_ip": "192.168.123.14",
-            "stb_type": "ZIP1018"
-        },
-        {
-            "stb_ip": "192.168.123.18",
-            "stb_type": "HEVC211"
-        }
-    ],
+    "settings": [],
     "automate_enabled": false,
     "start_time": ""
 }

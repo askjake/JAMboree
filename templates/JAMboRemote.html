@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <title id="host-name">STB Control Panel</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+
+        .remote-container {
+            position: relative;
+            width: 300px; /* Adjust based on your image size */
+            height: 880px; /* Adjust based on your image size */
+            background: url('/static/images/remote.jpg') no-repeat center center;
+            background-size: contain;
+        }
+
+        .button {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.03);
+            border: 2px solid transparent;
+            border-radius: 5px;
+            transition: background 0.3s, border 0.1s;
+        }
+
+        .button:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: #007BFF;
+        }
+
+        .button:active {
+            background: rgba(255, 255, 255, 0.4);
+            border-color: #0056b3;
+        }
+
+        /* Adjusted button positions */
+        #Power { top: 5.68%; left: 13.33%; width: 20%; height: 4.54%; }
+        #DVR { top: 11.36%; left: 8.33%; width: 25%; height: 4.54%; }
+        #Home { top: 11.36%; left: 36.67%; width: 25%; height: 4.54%; }
+        #Guide { top: 11.36%; left: 66.67%; width: 25%; height: 4.54%; }
+
+        #Options { top: 17.61%; left: 8.33%; width: 25%; height: 6.25%; }
+        #Up { top: 17.61%; left: 36.67%; width: 25%; height: 6.25%; }
+        #Voice { top: 17.61%; left: 66.67%; width: 25%; height: 6.25%; }
+
+        #Left { top: 25%; left: 8.33%; width: 25%; height: 7.95%; }
+        #Enter { top: 25%; left: 36.67%; width: 25%; height: 7.95%; }
+        #Right { top: 25%; left: 66.67%; width: 25%; height: 7.95%; }
+
+        #Back { top: 34.09%; left: 8.33%; width: 25%; height: 6.25%; }
+        #Down { top: 34.09%; left: 36.67%; width: 25%; height: 6.25%; }
+        #Info { top: 34.09%; left: 66.67%; width: 25%; height: 6.25%; }
+
+        #RWD { top: 42.61%; left: 11.67%; width: 23.33%; height: 5.11%; }
+        #Play { top: 42.61%; left: 36.67%; width: 25%; height: 5.11%; }
+        #FWD { top: 42.61%; left: 63.33%; width: 21.67%; height: 5.11%; }
+
+        #VolUp { top: 50%; left: 15%; width: 21.67%; height: 5.68%; }
+        #Recall { top: 51.7%; left: 39.33%; width: 20%; height: 5.11%; }
+        #ChUp { top: 50%; left: 61.67%; width: 20%; height: 5.68%; }
+
+        #VolDown { top: 56.82%; left: 16.67%; width: 20%; height: 5.68%; }
+        #Mute { top: 57.39%; left: 39.33%; width: 20%; height: 5.11%; }
+        #ChDown { top: 56.82%; left: 61.67%; width: 20%; height: 5.68%; }
+
+        #one { top: 64.2%; left: 18.33%; width: 18.33%; height: 3.98%; }
+        #two { top: 64.2%; left: 39.33%; width: 18.33%; height: 3.98%; }
+        #three { top: 64.2%; left: 60%; width: 20%; height: 3.98%; }
+
+        #four { top: 69.55%; left: 18.33%; width: 18.33%; height: 3.98%; }
+        #five { top: 69.55%; left: 39.33%; width: 18.33%; height: 3.98%; }
+        #six { top: 69.55%; left: 60%; width: 20%; height: 3.98%; }
+
+        #seven { top: 75%; left: 18.33%; width: 18.33%; height: 3.98%; }
+        #eight { top: 75%; left: 39.33%; width: 18.33%; height: 3.98%; }
+        #nine { top: 75%; left: 60%; width: 20%; height: 3.98%; }
+
+        #diamond { top: 80.68%; left: 18.33%; width: 18.33%; height: 3.98%; }
+        #zero { top: 80.68%; left: 39.33%; width: 18.33%; height: 3.98%; }
+        #ddiamond { top: 80.68%; left: 59.33%; width: 20%; height: 3.98%; }
+    </style>
+</head>
+<body>
+
+    <div class="remote-container">
+        <button onclick="location.href='/settops'">Settops</button>
+        <button onclick="location.href='/apps'">dayJAM</button>
+        <button onclick="location.href='http://10.74.139.230:9090/dpweb/'">Go to DPWeb</button>
+        
+        <div id="Power" class="button"></div>
+        <div id="DVR" class="button"></div>
+        <div id="Home" class="button"></div>
+        <div id="Guide" class="button"></div>
+        <div id="Options" class="button"></div>
+        <div id="Up" class="button"></div>
+        <div id="Voice" class="button"></div>
+        <div id="Left" class="button"></div>
+        <div id="Enter" class="button"></div>
+        <div id="Right" class="button"></div>
+        <div id="Back" class="button"></div>
+        <div id="Down" class="button"></div>
+        <div id="Info" class="button"></div>
+        <div id="RWD" class="button"></div>
+        <div id="Play" class="button"></div>
+        <div id="FWD" class="button"></div>
+        <div id="VolUp" class="button"></div>
+        <div id="Recall" class="button"></div>
+        <div id="ChUp" class="button"></div>
+        <div id="VolDown" class="button"></div>
+        <div id="Mute" class="button"></div>
+        <div id="ChDown" class="button"></div>
+        <div id="one" class="button"></div>
+        <div id="two" class="button"></div>
+        <div id="three" class="button"></div>
+        <div id="four" class="button"></div>
+        <div id="five" class="button"></div>
+        <div id="six" class="button"></div>
+        <div id="seven" class="button"></div>
+        <div id="eight" class="button"></div>
+        <div id="nine" class="button"></div>
+        <div id="diamond" class="button"></div>
+        <div id="zero" class="button"></div>
+        <div id="ddiamond" class="button"></div>
+    </div>
+
+    <div id="stb-list"></div>
+
+    <script>
+        window.onload = function() {
+            console.log('Script loaded and window.onload triggered');
+        
+            const activeKeys = new Map(); // Track which keys are currently pressed
+        
+            // Bind events to all buttons in the remote container
+            const buttons = document.querySelectorAll('.button');
+            if (buttons.length === 0) {
+                console.error("No buttons found with the class '.button'");
+            }
+        
+            buttons.forEach(button => {
+                console.log(`Attaching events to button with ID: ${button.id}`);
+                
+                button.addEventListener('mousedown', function() {
+                    this.startTime = Date.now(); // Record start time
+                    this.classList.add('pressed'); // Add pressed effect
+                    console.log(`Button ${this.id} mousedown event triggered`);
+                });
+        
+                button.addEventListener('mouseup', function() {
+                    const pressDuration = Date.now() - this.startTime; // Calculate press duration
+                    console.log(`Button ${this.id} was pressed for ${pressDuration} milliseconds.`);
+                    sendCommandToStbs(this.id, pressDuration); // Send command with calculated delay
+                    this.classList.remove('pressed'); // Remove pressed effect
+                    console.log(`Button ${this.id} mouseup event triggered`);
+                });
+            });
+        
+            // Key mapping for the remote buttons
+            const keyMapping = {
+                'Digit1': 'one',
+                'Digit2': 'two',
+                'Digit3': 'three',
+                'Digit4': 'four',
+                'Digit5': 'five',
+                'Digit6': 'six',
+                'Digit7': 'seven',
+                'Digit8': 'eight',
+                'Digit9': 'nine',
+                'Digit0': 'zero',
+                'ArrowUp': 'up',
+                'ArrowDown': 'down',
+                'ArrowLeft': 'left',
+                'ArrowRight': 'right',
+                'Enter': 'enter',
+                'Escape': 'back',
+                'KeyD': 'dvr',
+                'KeyH': 'home',
+                'KeyG': 'guide',
+                'KeyO': 'options',
+                'KeyM': 'menu',
+                'KeyI': 'info',
+            };
+        
+            // Add keydown event listener
+            document.addEventListener('keydown', function(event) {
+                const buttonId = keyMapping[event.code];
+                if (buttonId && !activeKeys.has(event.code)) {
+                    activeKeys.set(event.code, Date.now()); // Start time for the key
+                    console.log(`Keydown detected: ${event.code}, triggering button with ID: ${buttonId}`);
+                    const button = document.getElementById(buttonId);
+                    if (button) {
+                        button.classList.add('pressed'); // Visually show the button as pressed
+                        button.click(); // Trigger the button click
+                    }
+                }
+            });
+        
+            // Add keyup event listener to remove 'pressed' class after key is released
+            document.addEventListener('keyup', function(event) {
+                const buttonId = keyMapping[event.code];
+                if (buttonId && activeKeys.has(event.code)) {
+                    const startTime = activeKeys.get(event.code);
+                    const pressDuration = Date.now() - startTime; // Calculate press duration
+                    console.log(`Keyup detected: ${event.code}, releasing button with ID: ${buttonId}, press duration: ${pressDuration}ms`);
+        
+                    const button = document.getElementById(buttonId);
+                    if (button) {
+                        sendCommandToStbs(buttonId, pressDuration); // Send command
+                        button.classList.remove('pressed'); // Remove pressed effect
+                    }
+                    activeKeys.delete(event.code); // Remove the key from the activeKeys map
+                }
+            });
+        
+            fetchStbList();
+        };
+        
+		
+        // Function to send commands to all selected STBs
+        function sendCommandToStbs(buttonId, delay) {
+            const hostname = window.location.hostname;
+            const listBox = document.getElementById('stbList');
+            if (!listBox) {
+                console.error("STB list not found.");
+                return;
+            }
+
+            const selectedStbs = Array.from(listBox.selectedOptions).map(option => option.value);
+        
+            selectedStbs.forEach(stbName => {
+                const selectedOption = Array.from(listBox.options).find(option => option.value === stbName);
+        
+                if (selectedOption) {
+                    const remote = selectedOption.getAttribute('data-remote');
+                    const delayInt = parseInt(delay, 10);
+                    const url = `http://${hostname}:5001/auto/${remote}/${stbName}/${buttonId}/${delayInt}`;
+                    fetch(url)
+                        .then(response => response.json())
+                        .then(data => console.log('Command response:', data))
+                        .catch(error => console.error('Error sending command:', error));
+                } else {
+                    console.error(`STB option for ${stbName} not found.`);
+                }
+            });
+        }
+        
+        // Utility function to set a cookie
+        function setCookie(name, value, days) {
+            const d = new Date();
+            d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+            const expires = "expires=" + d.toUTCString();
+            document.cookie = name + "=" + value + ";" + expires + ";path=/";
+        }
+        
+        // Utility function to get a cookie by name
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for (let i = 0; ca.length > i; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1);
+                if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
+        }
+        
+        // Fetch STB list and populate a multi-selection list
+        function fetchStbList() {
+            fetch('/get-stb-list')
+                .then(response => response.json())
+                .then(data => {
+                    populateStbList(data.stbs);
+        
+                })
+                .catch(error => console.error('Error fetching STBs:', error));
+        }
+         
+        function populateStbList(stbs) {
+            console.log("Populating STB List with data:", stbs);  // Log the input data
+            const stbListDiv = document.getElementById('stb-list');
+            if (!stbListDiv) {
+                console.error("Error: 'stb-list' element not found.");
+                return;
+            }
+        
+            stbListDiv.innerHTML = ''; // Clear previous content
+            stbListDiv.classList.add('grid-container'); // Add grid container class for styling
+        
+            const listBox = document.createElement('select');
+            listBox.id = 'stbList';
+            listBox.multiple = true;
+            listBox.style.width = '100%';
+        
+            const numberOfStbs = Object.keys(stbs).length;
+            const itemHeight = 20;
+            const maxHeight = window.innerHeight * 0.8;
+        
+            const listBoxHeight = Math.min(numberOfStbs * itemHeight, maxHeight);
+            listBox.style.height = `${listBoxHeight}px`;
+        
+            Object.entries(stbs).forEach(([stbName, stbDetails]) => {
+                const opt = document.createElement('option');
+                opt.value = stbName;
+                opt.text = `${stbName}`;
+                opt.setAttribute('data-remote', stbDetails.remote);
+                listBox.appendChild(opt);
+                console.log(`Appending STB option: ${opt.text}`);  // Log each appended option
+            });
+        
+            stbListDiv.appendChild(listBox);
+        
+            const selectedStbs = getCookie('selectedStbs');
+            if (selectedStbs) {
+                const selectedValues = selectedStbs.split(',');
+                for (const option of listBox.options) {
+                    if (selectedValues.includes(option.value)) {
+                        option.selected = true;
+                    }
+                }
+            }
+        
+            listBox.onchange = function() {
+                const selectedOptions = Array.from(this.selectedOptions).map(option => option.value);
+                setCookie('selectedStbs', selectedOptions.join(','), 365);
+            };
+        
+            listBox.scrollTop = 0;
+        }
+		
+		 document.addEventListener("DOMContentLoaded", function () {
+            fetch('/hostname')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('host-name').textContent = data.hostname;
+                })
+                .catch(error => console.error('Error fetching hostname:', error));
+        });
+		
+    </script>
+</body>
+</html>

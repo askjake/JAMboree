@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title id="host-name">dayJAM</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <h1>dayJAM Interface</h1>
+
+    <div class="navigation">
+        <button onclick="location.href='/remote'">JAMboRemote</button>
+        <button onclick="location.href='/settops'">settings</button>
+        <button onclick="location.href='http://10.74.139.230:9090/dpweb/'">Go to DPWeb</button>
+    </div>
+
+    <div class="lists">
+        <div id="app-list-container" class="app-list">
+            <h2>Available Apps</h2>
+            <select id="app-list" multiple></select>
+        </div>
+
+        <div id="stb-list-container" class="stb-list">
+            <h2>Available STBs</h2>
+            <select id="stb-list" multiple></select>
+        </div>
+    </div>
+
+    <div class="buttons">
+        <button onclick="fetchAppsList()">Refresh Lists</button>
+        <button onclick="loadApps()">Load Selected App onto Selected STBs</button>
+    </div>
+
+    <div id="output"></div>
+
+    <!-- Click sound -->
+    <audio id="click-sound" src="{{ url_for('static', filename='click.mp3') }}"></audio>
+
+    <!-- JavaScript -->
+    <script src="{{ url_for('static', filename='apps.js') }}"></script>
+</body>
+</html>

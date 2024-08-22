@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="host-name">STB Manager</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            cursor: pointer;
+            background-color: #f2f2f2;
+        }
+        th:hover {
+            background-color: #ddd;
+        }
+        .edit-btn, .delete-btn, .add-row-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 5px 10px;
+            margin: 5px;
+            border: none;
+            cursor: pointer;
+        }
+        .edit-btn:hover, .delete-btn:hover, .add-row-btn:hover {
+            background-color: #45a049;
+        }
+        .save-btn {
+            background-color: #008CBA;
+            color: white;
+            padding: 5px 10px;
+            margin: 5px;
+            border: none;
+            cursor: pointer;
+        }
+        .save-btn:hover {
+            background-color: #007bb5;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="navigation">
+        <button onclick="location.href='/remote'">JAMboRemote</button>
+        <button onclick="location.href='/apps'">dayJAM</button>
+        <button onclick="location.href='http://10.74.139.230:9090/dpweb/'">Go to DPWeb</button>
+    </div>
+    
+    <h1>STB Manager</h1>
+
+    <table id="stb-table">
+        <thead>
+            <tr>
+                <th onclick="sortTable(0)">STBS</th>
+                <th onclick="sortTable(1)">STB</th>
+                <th onclick="sortTable(2)">IP</th>
+                <th onclick="sortTable(3)">Protocol</th>
+                <th onclick="sortTable(4)">Remote</th>
+                <th onclick="sortTable(5)">Model</th>
+                <th onclick="sortTable(6)">COM</th>
+                <th onclick="sortTable(6)">sw_ver</th>
+                <th onclick="sortTable(6)">apps</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="stb-table-body">
+            <!-- Rows will be populated by JavaScript -->
+        </tbody>
+    </table>
+    <button class="add-row-btn" onclick="addRow()">Add New Row</button>
+    <button class="save-btn" onclick="saveChanges()">Save Changes</button>
+
+    <script>
+        let stbData = {};
+        let originalData = {};
+
+        document.addEventListener("DOMContentLoaded", function () {
+            fetch('/base')
+                .then(response => response.text()) // Get response as text
+                .then(text => {
+                    let data;
+                    try {
+                        data = JSON.parse(text);
+                        if (!data.stbs) {
+                            throw new Error("No 'stbs' found in the data.");
+                        }
+                    } catch (error) {
+                        console.error("Error parsing JSON or 'stbs' key not found:", error);
+                        printToOutput(`Error parsing JSON or 'stbs' key not found: ${error.message}`);
+                        return;
+                    }
+                    stbData = data.stbs;
+                    originalData = JSON.parse(JSON.stringify(stbData)); // Make a deep copy
+                    populateTable(stbData);
+                })
+                .catch(error => {
+                    console.error('Error fetching STB data:', error);
+                    printToOutput(`Error fetching STB data: ${error.message}`);
+                });
+        });
+		
+        document.addEventListener("DOMContentLoaded", function () {
+            fetch('/hostname')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('host-name').textContent = data.hostname;
+                })
+                .catch(error => console.error('Error fetching hostname:', error));
+        });
+
+        function printToOutput(message) {
+            const outputDiv = document.getElementById('output');
+            const newMessage = document.createElement('p');
+            newMessage.textContent = message;
+            outputDiv.appendChild(newMessage);
+        }
+
+        function filterTable(columnIndex) {
+            const input = event.target;
+            const filter = input.value.toLowerCase();
+            const table = document.getElementById("stb-table");
+            const rows = table.getElementsByTagName('tbody')[0].rows;
+
+            for (let i = 0; i < rows.length; i++) {
+                const cell = rows[i].cells[columnIndex];
+                if (cell) {
+                    const text = cell.innerText.toLowerCase();
+                    rows[i].style.display = text.includes(filter) ? "" : "none";
+                }
+            }
+        }
+
+        function populateTable(data) {
+            const tableBody = document.getElementById('stb-table-body');
+            tableBody.innerHTML = '';
+
+            for (const [stbs, stbDetails] of Object.entries(data)) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td contenteditable="true" data-field="stbs">${stbs}</td>
+                    <td contenteditable="true" data-field="stb">${stbDetails.stb}</td>
+                    <td contenteditable="true" data-field="ip">${stbDetails.ip}</td>
+                    <td contenteditable="true" data-field="protocol">${stbDetails.protocol}</td>
+                    <td contenteditable="true" data-field="remote">${stbDetails.remote}</td>
+                    <td contenteditable="true" data-field="model">${stbDetails.model}</td>
+                    <td contenteditable="true" data-field="com">${stbDetails.com_port}</td>
+                    <td contenteditable="true" data-field="sw_ver">${stbDetails.sw_ver}</td>
+                    <td contenteditable="true" data-field="apps">${stbDetails.apps}</td>
+                    <td>
+                        <button class="edit-btn" onclick="editRow(this)">Edit</button>
+                        <button class="delete-btn" onclick="deleteRow(this)">Delete</button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+            }
+        }
+
+        function addRow() {
+            const tableBody = document.getElementById('stb-table-body');
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td contenteditable="true" data-field="stbs"></td>
+                <td contenteditable="true" data-field="stb"></td>
+                <td contenteditable="true" data-field="ip"></td>
+                <td contenteditable="true" data-field="protocol"></td>
+                <td contenteditable="true" data-field="remote"></td>
+                <td contenteditable="true" data-field="model"></td>
+                <td contenteditable="true" data-field="com"></td>
+                <td contenteditable="true" data-field="sw_ver"></td>
+                <td contenteditable="true" data-field="apps"></td>
+                <td>
+                    <button class="edit-btn" onclick="editRow(this)">Edit</button>
+                    <button class="delete-btn" onclick="deleteRow(this)">Delete</button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        }
+
+        function deleteRow(button) {
+            const row = button.closest('tr');
+            const stbsField = row.querySelector('td[data-field="stbs"]');
+            const stbs = stbsField ? stbsField.innerText.trim() : '';
+
+            if (stbs && stbData[stbs]) {
+                delete stbData[stbs];
+            }
+
+            row.remove();
+        }
+
+        function editRow(button) {
+            const row = button.closest('tr');
+            const stbsField = row.querySelector('td[data-field="stbs"]');
+            const stbField = row.querySelector('td[data-field="stb"]');
+            const ipField = row.querySelector('td[data-field="ip"]');
+            const protocolField = row.querySelector('td[data-field="protocol"]');
+            const remoteField = row.querySelector('td[data-field="remote"]');
+            const modelField = row.querySelector('td[data-field="model"]');
+            const comField = row.querySelector('td[data-field="com"]');
+            const sw_verField = row.querySelector('td[data-field="sw_ver"]');
+            const appsField = row.querySelector('td[data-field="apps"]');
+
+            const newStbs = stbsField.innerText.trim();
+            const newStb = stbField.innerText.trim();
+            const newIp = ipField.innerText.trim();
+            const newProtocol = protocolField.innerText.trim();
+            const newRemote = remoteField.innerText.trim();
+            const newModel = modelField.innerText.trim();
+            const newCom = comField.innerText.trim();
+            const newSw_ver = sw_verField.innerText.trim();
+            const newApps = appsField.innerText.trim();
+
+            if (!newStbs || !newStb || !newIp || !newProtocol || !newRemote || !newModel || !newCom || !newSw_ver || !newApps) {
+                alert("All fields must be filled out.");
+                return;
+            }
+
+            if (Object.keys(stbData).includes(newStbs) && newStbs !== stbsField.dataset.originalValue) {
+                alert("STBS must be unique.");
+                return;
+            }
+
+            // Update the stbData
+            const originalStbs = stbsField.dataset.originalValue || newStbs;
+            delete stbData[originalStbs];
+            stbData[newStbs] = {
+                stb: newStb,
+                ip: newIp,
+                protocol: newProtocol,
+                remote: newRemote,
+                model: newModel,
+                com: newCom,
+                sw_ver: newSw_ver,
+                apps: newApps,
+            };
+
+            // Reflect the changes in the table and button
+            stbsField.dataset.originalValue = newStbs;
+            button.textContent = "Edited";
+            button.disabled = true;
+        }
+
+        let sortOrder = {}; // Keep track of sort order for each column
+
+        function sortTable(columnIndex) {
+            const table = document.getElementById("stb-table");
+            const tbody = table.getElementsByTagName('tbody')[0];
+            const rows = Array.from(tbody.rows);
+    
+            // Toggle the sort order if the column is already sorted
+            sortOrder[columnIndex] = !sortOrder[columnIndex];
+
+            rows.sort((a, b) => {
+                const aText = a.cells[columnIndex].innerText.toLowerCase();
+                const bText = b.cells[columnIndex].innerText.toLowerCase();
+        
+                if (aText < bText) return sortOrder[columnIndex] ? -1 : 1;
+                if (aText > bText) return sortOrder[columnIndex] ? 1 : -1;
+                return 0;
+            });
+
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        function saveChanges() {
+            fetch('/base', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ stbs: stbData }),
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    alert("Changes saved successfully.");
+                    originalData = JSON.parse(JSON.stringify(stbData)); // Update original data
+                } else {
+                    alert("Error saving changes: " + result.error);
+                }
+            })
+            .catch(error => console.error('Error saving changes:', error));
+        }
+    </script>
+</body>
+</html>

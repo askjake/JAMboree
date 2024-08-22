@@ -1,0 +1,1382 @@
+[
+    {
+        "id": 1,
+        "name": "pairingdb",
+        "filePath": "/mnt/MISC_HD/databases/device_pairing_db/"
+    },
+    {
+        "id": 2,
+        "name": "raw_hd_debug.log",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 3,
+        "name": "Mini Log File Old",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 4,
+        "name": "Full Text DB",
+        "filePath": "/mnt/MISC_HD/databases/"
+    },
+    {
+        "id": 5,
+        "name": "ndm",
+        "filePath": "/mnt/MISC_HD/esosal_log/ndm/"
+    },
+    {
+        "id": 6,
+        "name": "search history",
+        "filePath": "/mnt/MISC_HD/databases/"
+    },
+    {
+        "id": 7,
+        "name": "netra",
+        "filePath": "/mnt/MISC_HD/esosal_log/netra/"
+    },
+    {
+        "id": 8,
+        "name": "netra_wifi_metrics",
+        "filePath": "/mnt/MISC_HD/netra/"
+    },
+    {
+        "id": 9,
+        "name": "NDMA DHCP moca0",
+        "filePath": "/mnt/MISC_HD/esosal_log/ndma_moca0_dhcp/"
+    },
+    {
+        "id": 10,
+        "name": "sdk echostar external sig",
+        "filePath": "/mnt/MISC_HD/web_app/src/sdk/"
+    },
+    {
+        "id": 11,
+        "name": "EIT ReadOnly DB",
+        "filePath": "/mnt/MISC_HD/databases/epg_db/"
+    },
+    {
+        "id": 12,
+        "name": "netra_network_device_list",
+        "filePath": "/mnt/MISC_HD/netra/"
+    },
+    {
+        "id": 13,
+        "name": "stbCtrl_joey",
+        "filePath": "/mnt/MISC_HD/joey_logs/stbCtrl/"
+    },
+    {
+        "id": 14,
+        "name": "lighttpd_access.log",
+        "filePath": "/mnt/MISC_HD/webdmn/log/"
+    },
+    {
+        "id": 15,
+        "name": "SAM Log",
+        "filePath": "/mnt/MISC_HD/esosal_log/SAMLog/"
+    },
+    {
+        "id": 16,
+        "name": "DLNA Server Log",
+        "filePath": "/mnt/MISC_HD/esosal_log/dlna_server_log/"
+    },
+    {
+        "id": 17,
+        "name": "Last Stack Dump",
+        "filePath": "/mnt/MISC_HD/stbhealth/"
+    },
+    {
+        "id": 18,
+        "name": "Browserfile__0file1dB",
+        "filePath": "/mnt/MISC_HD/databases/web_db/file__0/"
+    },
+    {
+        "id": 19,
+        "name": "NDMA LL moca0",
+        "filePath": "/mnt/MISC_HD/esosal_log/ndma_moca0_ll/"
+    },
+    {
+        "id": 20,
+        "name": "WSTLR Debug",
+        "filePath": "/mnt/MISC_HD/esosal_log/wstlr_debug/"
+    },
+    {
+        "id": 21,
+        "name": "Syslog NG Log",
+        "filePath": "/mnt/MISC_HD/syslog_ng_logs/"
+    },
+    {
+        "id": 22,
+        "name": "NDMA LL wl0",
+        "filePath": "/mnt/MISC_HD/esosal_log/ndma_wl0_ll/"
+    },
+    {
+        "id": 23,
+        "name": "bubble",
+        "filePath": "/mnt/MISC_HD/esosal/bubble/"
+    },
+    {
+        "id": 24,
+        "name": "IP Config File",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 25,
+        "name": "SDT Copy DB",
+        "filePath": "/mnt/MISC_HD/databases/"
+    },
+    {
+        "id": 26,
+        "name": "Browserhistorydb",
+        "filePath": "/mnt/MISC_HD/webkit/"
+    },
+    {
+        "id": 27,
+        "name": "Virtual NVM Log-1",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 28,
+        "name": "bsa_logs",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 29,
+        "name": "Hiawatha Error Log",
+        "filePath": "/mnt/MISC_HD/webdmn/log/hiawatha/"
+    },
+    {
+        "id": 30,
+        "name": "dcom",
+        "filePath": "/mnt/MISC_HD/esosal_log/dcom/"
+    },
+    {
+        "id": 31,
+        "name": "Webkit Log",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 32,
+        "name": "Daily Schedule Log",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 33,
+        "name": "loguploader.time",
+        "filePath": "/mnt/MISC_HD/log_uploader/"
+    },
+    {
+        "id": 34,
+        "name": "IUpnpInfoFile.txt",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 35,
+        "name": "debug config file",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 36,
+        "name": "netra_moca_metrics_history_old",
+        "filePath": "/mnt/MISC_HD/netra/"
+    },
+    {
+        "id": 37,
+        "name": "sdc.dat",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 38,
+        "name": "third_party_logs",
+        "filePath": "/mnt/MISC_HD/third_party_logs/"
+    },
+    {
+        "id": 39,
+        "name": "Modem Info",
+        "filePath": "/mnt/MISC_HD/on_demand/"
+    },
+    {
+        "id": 40,
+        "name": "ip_streaming",
+        "filePath": "/mnt/MISC_HD/esosal/ip_streaming/"
+    },
+    {
+        "id": 41,
+        "name": "Storage Device Manager",
+        "filePath": "/mnt/MISC_HD/esosal_log/"
+    },
+    {
+        "id": 42,
+        "name": "sddp_log",
+        "filePath": "/mnt/MISC_HD/sddp/"
+    },
+    {
+        "id": 43,
+        "name": "netflix_log",
+        "filePath": "/var/mnt/MISC_HD/third_party_logs/"
+    },
+    {
+        "id": 44,
+        "name": "catalog-sqlite.db",
+        "filePath": "/mnt/MISC_HD/databases/"
+    },
+    {
+        "id": 45,
+        "name": "sdt.db",
+        "filePath": "/tmp/"
+    },
+    {
+        "id": 46,
+        "name": "Adaptivedatafile",
+        "filePath": "/mnt/MISC_HD/on_demand/"
+    },
+    {
+        "id": 47,
+        "name": "netflix_ui_hash",
+        "filePath": "/var/mnt/MISC_HD/netflix/"
+    },
+    {
+        "id": 48,
+        "name": "log_uploader_log_file",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 49,
+        "name": "SysEventD",
+        "filePath": "/mnt/MISC_HD/esosal_log/SysEventD/"
+    },
+    {
+        "id": 50,
+        "name": "Brendan Test smp.upload",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 51,
+        "name": "Mini Server",
+        "filePath": "/mnt/MISC_HD/esosal_log/mini_server/"
+    },
+    {
+        "id": 52,
+        "name": "Receiver.txt",
+        "filePath": "/tmp/"
+    },
+    {
+        "id": 53,
+        "name": "SBSDK Debug Log Cur",
+        "filePath": "/mnt/MISC_HD/sling/"
+    },
+    {
+        "id": 54,
+        "name": "netra_process_memory",
+        "filePath": "/mnt/MISC_HD/netra/"
+    },
+    {
+        "id": 55,
+        "name": "ghopper_config_cache",
+        "filePath": "/mnt/MISC_HD/sl_client/"
+    },
+    {
+        "id": 56,
+        "name": "netra_conn_status_summary",
+        "filePath": "/mnt/MISC_HD/netra/"
+    },
+    {
+        "id": 57,
+        "name": "HDD Root Mini Watch Log",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 58,
+        "name": "Caller ID",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 59,
+        "name": "SDT raw",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 60,
+        "name": "joey_wslr",
+        "filePath": "/mnt/MISC_HD/joey_logs/wstlr_debug/"
+    },
+    {
+        "id": 61,
+        "name": "SQL Mgmt",
+        "filePath": "/mnt/MISC_HD/esosal_log/sql_mgmt/"
+    },
+    {
+        "id": 62,
+        "name": "WebApp Launch Index",
+        "filePath": "/mnt/MISC_HD/web_app/src/launch/"
+    },
+    {
+        "id": 63,
+        "name": "gandalf",
+        "filePath": "/mnt/MISC_HD/esosal_log/gandalf/"
+    },
+    {
+        "id": 64,
+        "name": "Stack Dump",
+        "filePath": "/mnt/MISC_HD/stbctrl/"
+    },
+    {
+        "id": 65,
+        "name": "XIP Streaming Client Log",
+        "filePath": "/mnt/MISC_HD/esosal_log/xip_strm_client/"
+    },
+    {
+        "id": 66,
+        "name": "DB Backup DVR DB",
+        "filePath": "/mnt/MISC_HD/db_backup/dvr_db/"
+    },
+    {
+        "id": 67,
+        "name": "STB Lightning Logs",
+        "filePath": "/mnt/MISC_HD/esosal_log/stb_lightning/"
+    },
+    {
+        "id": 68,
+        "name": "Hiawatha Local Access Log",
+        "filePath": "/mnt/MISC_HD/webdmn/log/hiawatha/"
+    },
+    {
+        "id": 69,
+        "name": "Hiawatha System Log",
+        "filePath": "/mnt/MISC_HD/webdmn/log/hiawatha/"
+    },
+    {
+        "id": 70,
+        "name": "IUpnpErrFile.bak",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 71,
+        "name": "im_key_log",
+        "filePath": "/mnt/MISC_HD/esosal_log/im_key_log/"
+    },
+    {
+        "id": 72,
+        "name": "NetConMgr Log",
+        "filePath": "/mnt/MISC_HD/esosal_log/NetConMgr/"
+    },
+    {
+        "id": 73,
+        "name": "NDMA LL eth0",
+        "filePath": "/mnt/MISC_HD/esosal_log/ndma_eth0_ll/"
+    },
+    {
+        "id": 74,
+        "name": "NDMA LL eth1",
+        "filePath": "/mnt/MISC_HD/esosal_log/ndma_eth1_ll/"
+    },
+    {
+        "id": 75,
+        "name": "Hiawatha SSL Access Log",
+        "filePath": "/mnt/MISC_HD/webdmn/log/hiawatha/"
+    },
+    {
+        "id": 76,
+        "name": "netflix_ui_hash_etag",
+        "filePath": "/var/mnt/MISC_HD/netflix/"
+    },
+    {
+        "id": 77,
+        "name": "Esosal Log Dir",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 78,
+        "name": "netflix_infield_test",
+        "filePath": "/mnt/MISC_HD/esosal_log/netflix_infield/"
+    },
+    {
+        "id": 79,
+        "name": "IPTV Catalog Prod DB",
+        "filePath": "/mnt/MISC_HD/databases/ipvod_db/iptv_cat_db/"
+    },
+    {
+        "id": 80,
+        "name": "You Again Adaptive log File",
+        "filePath": "/mnt/MISC_HD/on_demand/rentals/30737/"
+    },
+    {
+        "id": 81,
+        "name": "Hiawatha HTTP Access Log",
+        "filePath": "/mnt/MISC_HD/webdmn/log/hiawatha/"
+    },
+    {
+        "id": 82,
+        "name": "SSA Log",
+        "filePath": "/mnt/MISC_HD/esosal_log/ssa_log/"
+    },
+    {
+        "id": 83,
+        "name": "Hiawatha HTTP Error Log",
+        "filePath": "/mnt/MISC_HD/webdmn/log/hiawatha/"
+    },
+    {
+        "id": 84,
+        "name": "BrowserDatabasesdB",
+        "filePath": "/mnt/MISC_HD/databases/web_db/"
+    },
+    {
+        "id": 85,
+        "name": "AV_REQ_HD",
+        "filePath": "/var/mnt/HDD_ROOT/AV_REQ_HD/"
+    },
+    {
+        "id": 86,
+        "name": "moca_index.html",
+        "filePath": "/mnt/MISC_HD/web_app/src/moca_diagnostic/"
+    },
+    {
+        "id": 87,
+        "name": "bsa_snoops.cfa",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 88,
+        "name": "netra_moca_metrics_summary",
+        "filePath": "/mnt/MISC_HD/netra/"
+    },
+    {
+        "id": 89,
+        "name": "NDMA DHCP wl0",
+        "filePath": "/mnt/MISC_HD/esosal_log/ndma_wl0_dhcp/"
+    },
+    {
+        "id": 90,
+        "name": "loguploader",
+        "filePath": "/mnt/MISC_HD/esosal_log/log_uploader/"
+    },
+    {
+        "id": 91,
+        "name": "log list file",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 92,
+        "name": "FVOD DB",
+        "filePath": "/mnt/MISC_HD/databases/dvr_db/"
+    },
+    {
+        "id": 93,
+        "name": "DLNACP Log",
+        "filePath": "/mnt/MISC_HD/esosal_log/dlnacp_log/"
+    },
+    {
+        "id": 94,
+        "name": "IPT Queue File",
+        "filePath": "/mnt/MISC_HD/on_demand/queue/"
+    },
+    {
+        "id": 95,
+        "name": "usb_media_mgr",
+        "filePath": "/mnt/MISC_HD/esosal_log/usb_media_mgr/"
+    },
+    {
+        "id": 96,
+        "name": "Hiawatha Garbage Log",
+        "filePath": "/mnt/MISC_HD/webdmn/log/hiawatha/"
+    },
+    {
+        "id": 97,
+        "name": "SBSDK Debug Log",
+        "filePath": "/mnt/MISC_HD/sling/"
+    },
+    {
+        "id": 98,
+        "name": "browser",
+        "filePath": "/mnt/MISC_HD/esosal_log/browser/"
+    },
+    {
+        "id": 99,
+        "name": "Connection History",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 100,
+        "name": "Hiawatha Local Error Log",
+        "filePath": "/mnt/MISC_HD/webdmn/log/hiawatha/"
+    },
+    {
+        "id": 101,
+        "name": "Brendan Test nal.upload",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 102,
+        "name": "NIT raw",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 103,
+        "name": "OTV Log",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 104,
+        "name": "Mini Log File",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 105,
+        "name": "IUpnpErrFile.txt",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 106,
+        "name": "Netflix_FCGI.LOG",
+        "filePath": "/mnt/MISC_HD/netflix/"
+    },
+    {
+        "id": 107,
+        "name": "STB Fwdr",
+        "filePath": "/mnt/MISC_HD/esosal_log/stbFwdr/"
+    },
+    {
+        "id": 108,
+        "name": "Global Timers DB",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 109,
+        "name": "Netflix_fuse_vfs",
+        "filePath": "/mnt/MISC_HD/esosal_log/fuse_vfs/"
+    },
+    {
+        "id": 110,
+        "name": "ProcMgr",
+        "filePath": "/mnt/MISC_HD/esosal_log/procmgr/"
+    },
+    {
+        "id": 111,
+        "name": "SG Server",
+        "filePath": "/mnt/MISC_HD/esosal_log/sg_server/"
+    },
+    {
+        "id": 112,
+        "name": "NAL",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 113,
+        "name": "netflix_ui_hash_sig",
+        "filePath": "/var/mnt/MISC_HD/netflix/"
+    },
+    {
+        "id": 114,
+        "name": "client_download_catalog",
+        "filePath": "/mnt/MISC_HD/software_downloads/server/"
+    },
+    {
+        "id": 115,
+        "name": "R0084457563_21538xml",
+        "filePath": "/mnt/MISC_HD/on_demand/rentals/21538/"
+    },
+    {
+        "id": 116,
+        "name": "netflix_infield",
+        "filePath": "/var/mnt/MISC_HD/esosal_log/netflix_infield/"
+    },
+    {
+        "id": 117,
+        "name": "MOCA Monitor Log",
+        "filePath": "/mnt/MISC_HD/esosal_log/moca_monitor/"
+    },
+    {
+        "id": 118,
+        "name": "STBCtrl",
+        "filePath": "/mnt/MISC_HD/esosal_log/stbCtrl/"
+    },
+    {
+        "id": 119,
+        "name": "Sideloading",
+        "filePath": "/mnt/MISC_HD/esosal_log/"
+    },
+    {
+        "id": 120,
+        "name": "Input Mgr",
+        "filePath": "/mnt/MISC_HD/esosal_log/input_mgr/"
+    },
+    {
+        "id": 121,
+        "name": "Hiawatha Exploit Log",
+        "filePath": "/mnt/MISC_HD/webdmn/log/hiawatha/"
+    },
+    {
+        "id": 122,
+        "name": "netflix",
+        "filePath": "/var/mnt/MISC_HD/esosal_log/netflix/"
+    },
+    {
+        "id": 123,
+        "name": "netra_moca_metrics_history",
+        "filePath": "/mnt/MISC_HD/netra/"
+    },
+    {
+        "id": 124,
+        "name": "EXT Mini Watch Log",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 125,
+        "name": "Daily Schedule DB",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 126,
+        "name": "NetConMgr",
+        "filePath": "/mnt/MISC_HD/esosal_log/NetConMgr/"
+    },
+    {
+        "id": 127,
+        "name": "netra_wjap_metrics",
+        "filePath": "/mnt/MISC_HD/netra/"
+    },
+    {
+        "id": 128,
+        "name": "ES_RESERVED_wrk_tbl.tbl",
+        "filePath": "/var/mnt/HDD_ROOT/ES_RESERVED/annc/"
+    },
+    {
+        "id": 129,
+        "name": "DVR DB",
+        "filePath": "/mnt/MISC_HD/databases/dvr_db/"
+    },
+    {
+        "id": 130,
+        "name": "Webkit log.txt",
+        "filePath": "/mnt/MISC_HD/webkit/"
+    },
+    {
+        "id": 131,
+        "name": "Media Renderer Log",
+        "filePath": "/mnt/MISC_HD/esosal_log/media_renderer/"
+    },
+    {
+        "id": 132,
+        "name": "Storage Device Manager Log",
+        "filePath": "/mnt/MISC_HD/esosal_log/strg_dev_mngr/"
+    },
+    {
+        "id": 133,
+        "name": "lighttpd_error.log",
+        "filePath": "/mnt/MISC_HD/webdmn/log/"
+    },
+    {
+        "id": 134,
+        "name": "Hiawatha SSL Error Log",
+        "filePath": "/mnt/MISC_HD/webdmn/log/hiawatha/"
+    },
+    {
+        "id": 135,
+        "name": "SBSDK App Log",
+        "filePath": "/mnt/MISC_HD/esosal_log/sbsdk_app_log/"
+    },
+    {
+        "id": 136,
+        "name": "Invidi Debug Log",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 137,
+        "name": "NDMA LL hpeth0",
+        "filePath": "/mnt/MISC_HD/esosal_log/ndma_hpeth0_ll/"
+    },
+    {
+        "id": 138,
+        "name": "DLNA Log",
+        "filePath": "/mnt/MISC_HD/esosal_log/dlna_log/"
+    },
+    {
+        "id": 139,
+        "name": "Global Timers DB Copy",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 140,
+        "name": "1_timers_history.db",
+        "filePath": "/mnt/MISC_HD/databases/timers/"
+    },
+    {
+        "id": 141,
+        "name": "lighttpd_breakage.log",
+        "filePath": "/mnt/MISC_HD/webdmn/log/"
+    },
+    {
+        "id": 142,
+        "name": "Series DB",
+        "filePath": "/mnt/MISC_HD/databases/img_db/"
+    },
+    {
+        "id": 143,
+        "name": "wjap_logs",
+        "filePath": "/mnt/MISC_HD/esosal_log/wjap_logs/"
+    },
+    {
+        "id": 144,
+        "name": "NDMA DHCP hpeth0",
+        "filePath": "/mnt/MISC_HD/esosal_log/ndma_hpeth0_dhcp/"
+    },
+    {
+        "id": 145,
+        "name": "analytics",
+        "filePath": "/mnt/MISC_HD/esosal_log/analytics/"
+    },
+    {
+        "id": 146,
+        "name": "SGS Client Log",
+        "filePath": "/mnt/MISC_HD/esosal_log/sgs_client_process/"
+    },
+    {
+        "id": 147,
+        "name": "1_timers_global.db.backup",
+        "filePath": "/mnt/MISC_HD/databases/timers/"
+    },
+    {
+        "id": 148,
+        "name": "zTEST File Not Found",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 149,
+        "name": "Weather index.html",
+        "filePath": "/mnt/MISC_HD/web_app/src/weather/"
+    },
+    {
+        "id": 150,
+        "name": "Virtual NVM Log-2",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 151,
+        "name": "Multi Mini Watch Log",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 152,
+        "name": "home_automation",
+        "filePath": "/mnt/MISC_HD/esosal/home_automation/"
+    },
+    {
+        "id": 153,
+        "name": "qt_gui.log",
+        "filePath": "/mnt/MISC_HD/esosal_log/qt_gui/"
+    },
+    {
+        "id": 154,
+        "name": "HDMI_Drive_Hdcp_log",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 155,
+        "name": "lighttpd_access_ssl.log",
+        "filePath": "/mnt/MISC_HD/webdmn/log/"
+    },
+    {
+        "id": 156,
+        "name": "NDMA DHCP eth1",
+        "filePath": "/mnt/MISC_HD/esosal_log/ndma_eth1_dhcp/"
+    },
+    {
+        "id": 157,
+        "name": "NDMA DHCP eth0",
+        "filePath": "/mnt/MISC_HD/esosal_log/ndma_eth0_dhcp/"
+    },
+    {
+        "id": 158,
+        "name": "UMM Log",
+        "filePath": "/mnt/MISC_HD/esosal_log/UMM/"
+    },
+    {
+        "id": 159,
+        "name": "SAMLog STBCtrl",
+        "filePath": "/mnt/MISC_HD/esosal_log/SAMLog/"
+    },
+    {
+        "id": 160,
+        "name": "K Trap",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 161,
+        "name": "Browser esosal log",
+        "filePath": "/mnt/MISC_HD/esosal_log/browser/"
+    },
+    {
+        "id": 162,
+        "name": "data_search",
+        "filePath": "/mnt/MISC_HD/esosal_log/data_search/"
+    },
+    {
+        "id": 163,
+        "name": "1_timers_schedule.db",
+        "filePath": "/mnt/MISC_HD/databases/timers/"
+    },
+    {
+        "id": 164,
+        "name": "MISC_mini_wtchlog",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 165,
+        "name": "relevance_history",
+        "filePath": "/mnt/MISC_HD/databases/relevance/"
+    },
+    {
+        "id": 166,
+        "name": "uitv2.log",
+        "filePath": "/mnt/MISC_HD/qt_ui/"
+    },
+    {
+        "id": 167,
+        "name": "IM Key Log",
+        "filePath": "/mnt/MISC_HD/input_mgr_data/"
+    },
+    {
+        "id": 168,
+        "name": "Misc_HD_File_List",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 169,
+        "name": "Catalog File",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 170,
+        "name": "UI Tokens DB",
+        "filePath": "/mnt/MISC_HD/databases/ui_tokens_db/"
+    },
+    {
+        "id": 171,
+        "name": "netra1",
+        "filePath": "/mnt/MISC_HD/esosal_log/netra/"
+    },
+    {
+        "id": 172,
+        "name": "IUpnpInfoFile.bak",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 173,
+        "name": "sb_cfg_file",
+        "filePath": "/mnt/MISC_HD/sling/"
+    },
+    {
+        "id": 174,
+        "name": "netra0",
+        "filePath": "/mnt/MISC_HD/esosal_log/netra/"
+    },
+    {
+        "id": 175,
+        "name": "z_wave_daemon",
+        "filePath": "/mnt/MISC_HD/esosal/z_wave_daemon/"
+    },
+    {
+        "id": 176,
+        "name": "lighttpd_http_access.log",
+        "filePath": "/mnt/MISC_HD/webdmn/log/"
+    },
+    {
+        "id": 177,
+        "name": "Hiawatha Access Log",
+        "filePath": "/mnt/MISC_HD/webdmn/log/hiawatha/"
+    },
+    {
+        "id": 178,
+        "name": "stbhealthgz",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 179,
+        "name": "1_timers_global.db",
+        "filePath": "/mnt/MISC_HD/databases/timers/"
+    },
+    {
+        "id": 180,
+        "name": "lighttpd_access_local.log",
+        "filePath": "/mnt/MISC_HD/webdmn/log/"
+    },
+    {
+        "id": 181,
+        "name": "sft_dwnld_tgt.txt",
+        "filePath": "/mnt/MISC_HD/software_downloads/server/"
+    },
+    {
+        "id": 182,
+        "name": "ha_ipcam_mgr",
+        "filePath": "/mnt/MISC_HD/esosal/ha_ipcam_mgr/"
+    },
+    {
+        "id": 183,
+        "name": "Invidi Debug Log Cur",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 184,
+        "name": "Signal Strength Log",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 185,
+        "name": "Daily Schedule Copy",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 186,
+        "name": "HHK Status Log",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 187,
+        "name": "USB Media Manager",
+        "filePath": "/mnt/MISC_HD/esosal_log/"
+    },
+    {
+        "id": 188,
+        "name": "zigbee",
+        "filePath": "/mnt/MISC_HD/esosal/zigbee/"
+    },
+    {
+        "id": 189,
+        "name": "EFS Log",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 190,
+        "name": "OnDemand DynUI XML",
+        "filePath": "/mnt/MISC_HD/on_demand/ui/"
+    },
+    {
+        "id": 191,
+        "name": "Archive.db",
+        "filePath": "/mnt/MISC_HD/databases/dvr_db/"
+    },
+    {
+        "id": 192,
+        "name": "Nickname Cookie",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 199,
+        "name": "James Test",
+        "filePath": "/mnt/MISC_HD/stbhealth/"
+    },
+    {
+        "id": 200,
+        "name": "sl_dev_config",
+        "filePath": "/mnt/MISC_HD/sl_client/"
+    },
+    {
+        "id": 201,
+        "name": "netflix_wally",
+        "filePath": "/mnt/NAND/netflix/"
+    },
+    {
+        "id": 204,
+        "name": "netflix_log_mnt",
+        "filePath": "/mnt/MISC_HD/third_party_logs/"
+    },
+    {
+        "id": 205,
+        "name": "wally_netflix_device_pairing_db",
+        "filePath": "/mnt/NAND/databases/device_pairing_db/"
+    },
+    {
+        "id": 206,
+        "name": "wally_netflix_db_timers_global",
+        "filePath": "/mnt/NAND/databases/timers/"
+    },
+    {
+        "id": 207,
+        "name": "wally_netflix_db_ipvod",
+        "filePath": "/mnt/NAND/databases/dvr_db/"
+    },
+    {
+        "id": 208,
+        "name": "wally_netflix_log",
+        "filePath": "/tmp/third_party_logs/"
+    },
+    {
+        "id": 209,
+        "name": "wally_netflix_infield",
+        "filePath": "/var/tmp/esosal_log/netflix_infield/"
+    },
+    {
+        "id": 210,
+        "name": "netflix_mgr",
+        "filePath": "/mnt/MISC_HD/esosal_log/netflix_mgr/"
+    },
+    {
+        "id": 211,
+        "name": "Img DB",
+        "filePath": "/mnt/MISC_HD/databases/img_db/"
+    },
+    {
+        "id": 212,
+        "name": "nand_apps",
+        "filePath": "/mnt/NAND/apps/"
+    },
+    {
+        "id": 213,
+        "name": "app_bridge_fcgi",
+        "filePath": "/mnt/MISC_HD/esosal_log/app_bridge_fcgi/"
+    },
+    {
+        "id": 214,
+        "name": "tmp",
+        "filePath": "/tmp/"
+    },
+    {
+        "id": 215,
+        "name": "STB Lightning Files",
+        "filePath": "/mnt/MISC_HD/sl_client/"
+    },
+    {
+        "id": 216,
+        "name": "youtube",
+        "filePath": "/mnt/MISC_HD/youtube/"
+    },
+    {
+        "id": 217,
+        "name": "sl_client",
+        "filePath": "/mnt/MISC_HD/sl_client/"
+    },
+    {
+        "id": 218,
+        "name": "roviresult",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 219,
+        "name": "wally_wprlog",
+        "filePath": "/mnt/MISC_HD/esosal_log/wpr_log/"
+    },
+    {
+        "id": 220,
+        "name": "hal_init",
+        "filePath": "/mnt/MISC_HD/esosal_log/hal_init/"
+    },
+    {
+        "id": 221,
+        "name": "appflinger",
+        "filePath": "/mnt/MISC_HD/esosal_log/appflinger/"
+    },
+    {
+        "id": 222,
+        "name": "Sling_Pod_App_logs",
+        "filePath": "/mnt/MISC_HD/esosal_log/sling_pod_app_log/"
+    },
+    {
+        "id": 223,
+        "name": "database",
+        "filePath": "/mnt/MISC_HD/databases/"
+    },
+    {
+        "id": 224,
+        "name": "dial-fcgi",
+        "filePath": "/mnt/MISC_HD/esosal_log/dial-fcgi/"
+    },
+    {
+        "id": 225,
+        "name": "HEVCTimer",
+        "filePath": "/mnt/NAND/databases/timers/"
+    },
+    {
+        "id": 226,
+        "name": "HEVCRelevance",
+        "filePath": "/mnt/NAND/databases/relevance/"
+    },
+    {
+        "id": 227,
+        "name": "PlayFi HCP",
+        "filePath": "/mnt/MISC_HD/esosal_log/playfi_hcp/"
+    },
+    {
+        "id": 228,
+        "name": "PlayFi Proxy",
+        "filePath": "/mnt/MISC_HD/esosal_log/playfi_proxy/"
+    },
+    {
+        "id": 229,
+        "name": "PlayFi Player",
+        "filePath": "/mnt/MISC_HD/esosal_log/playfi_player/"
+    },
+    {
+        "id": 230,
+        "name": "Cloud_Software_Update",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 231,
+        "name": "Mike Test",
+        "filePath": "/var/mnt/MISC_HD/"
+    },
+    {
+        "id": 232,
+        "name": "play_ready",
+        "filePath": "/tmp/playready/"
+    },
+    {
+        "id": 233,
+        "name": "Pipeline_Control",
+        "filePath": "/mnt/MISC_HD/esosal_log/"
+    },
+    {
+        "id": 234,
+        "name": "lsofprocs",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 235,
+        "name": "EST",
+        "filePath": "/mnt/MISC_HD/esosal_log/est-fcgi/"
+    },
+    {
+        "id": 236,
+        "name": "cobalt",
+        "filePath": "/mnt/MISC_HD/esosal_log/cobalt/"
+    },
+    {
+        "id": 237,
+        "name": "step",
+        "filePath": "/mnt/MISC_HD/esosal_log/step/"
+    },
+    {
+        "id": 238,
+        "name": "Real Time Tracking",
+        "filePath": "/mnt/MISC_HD/esosal_log/rtrd/"
+    },
+    {
+        "id": 243,
+        "name": "qt_ui_profile",
+        "filePath": "/mnt/MISC_HD/qt_ui/"
+    },
+    {
+        "id": 244,
+        "name": "FARM_log",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 245,
+        "name": "Relevance Scoring",
+        "filePath": "/mnt/MISC_HD/databases/relevance/scoring/"
+    },
+    {
+        "id": 246,
+        "name": "ws_debug_log",
+        "filePath": "/mnt/MISC_HD/sl_client/"
+    },
+    {
+        "id": 247,
+        "name": "fuseInfo",
+        "filePath": "/mnt/MISC_HD/esosal_log/fuseInfo/"
+    },
+    {
+        "id": 248,
+        "name": "snap",
+        "filePath": "/mnt/MISC_HD/esosal_log/snap_fcgi/"
+    },
+    {
+        "id": 249,
+        "name": "Token FCGI",
+        "filePath": "/mnt/MISC_HD/esosal_log/token_fcgi/"
+    },
+    {
+        "id": 250,
+        "name": "snap mgr",
+        "filePath": "/mnt/MISC_HD/esosal_log/snap_dl_mgr/"
+    },
+    {
+        "id": 251,
+        "name": "Tracker FCGI",
+        "filePath": "/mnt/MISC_HD/esosal_log/tracker-fcgi/"
+    },
+    {
+        "id": 252,
+        "name": "Info FCGI",
+        "filePath": "/var/mnt/MISC_HD/esosal_log/info-fcgi/"
+    },
+    {
+        "id": 253,
+        "name": "SNAP Auto IP Logs",
+        "filePath": "/mnt/MISC_HD/joey_logs/SNAP/autoip/"
+    },
+    {
+        "id": 254,
+        "name": "Hawk Test",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 255,
+        "name": "Primary Log Group Current",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 256,
+        "name": "Amazon Prime Video Logs",
+        "filePath": "/mnt/MISC_HD/third_party_logs/amazonprime/"
+    },
+    {
+        "id": 257,
+        "name": "Amazon Container Log",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 258,
+        "name": "Image FCGI Logs",
+        "filePath": "/var/mnt/MISC_HD/esosal_log/"
+    },
+    {
+        "id": 259,
+        "name": "Cobalt Logs",
+        "filePath": "/mnt/MISC_HD/esosal_log/cobalt/"
+    },
+    {
+        "id": 260,
+        "name": "DNS Mask Logs",
+        "filePath": "/mnt/MISC_HD/third_party_logs/"
+    },
+    {
+        "id": 261,
+        "name": "Voice Module Logs",
+        "filePath": "/mnt/MISC_HD/esosal_log/voice/"
+    },
+    {
+        "id": 262,
+        "name": "OMEGA",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 263,
+        "name": "mtnGenMgr",
+        "filePath": "/mnt/MISC_HD/esosal_log/mtn_gen_mgr/"
+    },
+    {
+        "id": 264,
+        "name": "mtnServer",
+        "filePath": "/mnt/MISC_HD/esosal_log/mtn_server/"
+    },
+    {
+        "id": 265,
+        "name": "wrk_tbl",
+        "filePath": "/mnt/ES_RESERVED/annc/"
+    },
+    {
+        "id": 266,
+        "name": "Android Update Logs",
+        "filePath": "/mnt/MISC_HD/esosal_log/android_update/"
+    },
+    {
+        "id": 267,
+        "name": "ATV Logs",
+        "filePath": "/mnt/MISC_HD/esosal_log/"
+    },
+    {
+        "id": 268,
+        "name": "Remote Data Sender",
+        "filePath": "/mnt/MISC_HD/esosal_log/remote_data_sender/"
+    },
+    {
+        "id": 269,
+        "name": "Android Download Files",
+        "filePath": "/mnt/MISC_HD/software_downloads/server/"
+    },
+    {
+        "id": 273,
+        "name": "Ghopper Websocket",
+        "filePath": "/mnt/MISC_HD/sl_client/"
+    },
+    {
+        "id": 274,
+        "name": "STB Health Live",
+        "filePath": "/mnt/MISC_HD/esosal_log/stbhlive/"
+    },
+    {
+        "id": 275,
+        "name": "mercury",
+        "filePath": "/mnt/MISC_HD/sl_client/"
+    },
+    {
+        "id": 276,
+        "name": "Hopper Plus screen shots",
+        "filePath": "/mnt/MISC_HD/vm/client/"
+    },
+    {
+        "id": 277,
+        "name": "Log Reaper",
+        "filePath": "/mnt/MISC_HD/esosal_log/log_reaper/"
+    },
+    {
+        "id": 278,
+        "name": "relevance_dashboard",
+        "filePath": "/mnt/MISC_HD/databases/relevance/"
+    },
+    {
+        "id": 279,
+        "name": "Critical ATV Logs",
+        "filePath": "/mnt/MISC_HD/esosal_log/"
+    },
+    {
+        "id": 280,
+        "name": "ATV Joey Crash Logs",
+        "filePath": "/mnt/MISC_HD/esosal_log/"
+    },
+    {
+        "id": 281,
+        "name": "ATV Network",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 282,
+        "name": "ATV Hopper Superset",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 283,
+        "name": "SGS Proxy FCGI",
+        "filePath": "/mnt/MISC_HD/esosal_log/sgs_proxy-fcgi/"
+    },
+    {
+        "id": 284,
+        "name": "Websockmgr",
+        "filePath": "/mnt/MISC_HD/esosal_log/websockmgr/"
+    },
+    {
+        "id": 285,
+        "name": "VFS",
+        "filePath": "/mnt/MISC_HD/vfs/"
+    },
+    {
+        "id": 286,
+        "name": "Live Linear",
+        "filePath": "/mnt/MISC_HD/esosal_log/"
+    },
+    {
+        "id": 287,
+        "name": "Features Live",
+        "filePath": "/mnt/MISC_HD/"
+    },
+    {
+        "id": 288,
+        "name": "SGSProxy",
+        "filePath": "/var/mnt/MISC_HD/esosal_log/sgs_proxy-fcgi/"
+    },
+    {
+        "id": 289,
+        "name": "VAR",
+        "filePath": "/mnt/MISC_HD/esosal_log/"
+    },
+    {
+        "id": 290,
+        "name": "tvmanagerservice",
+        "filePath": "/mnt/MISC_HD/esosal_log/"
+    },
+    {
+        "id": 291,
+        "name": "launcher",
+        "filePath": "/mnt/MISC_HD/esosal_log/"
+    }
+]

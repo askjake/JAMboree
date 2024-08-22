@@ -1,6 +1,3 @@
-
-####5/6/2024  added Live function in rf remote
-#### 5/12/2024 added unpair button *enter blood code to enable
 from scp import SCPClient
 import sys
 import tkinter as tk
@@ -27,26 +24,33 @@ from get_stb_list import *
 import socket
 from debug_gui import DebugGUI
 from debug_gui import *
-#from video_ui import VideoUI
+import logging 
 import ast
 from PIL import Image, ImageTk
+
+# Set up logging
+logging.basicConfig(filename='debugJam.log', level=logging.DEBUG)
+logging.debug('JAMboree script started.')
 
 app = Flask(__name__, static_folder='static')
 CORS(app)  # Enable CORS for the entire Flask app
 
 # Append the directory containing sgs_lib to the system path
 script_dir = os.path.abspath('scripts/')  # Adjust this path as necessary
+sys.path.append(script_dir)
 
-sys.path.append(script_dir)  ## add this in front of sub process: "  os.chdir(script_dir)  "
 config_file = 'base.txt'
 credentials_file = 'credentials.json'
 
 class JAMboree_gui(tk.Tk):
     def __init__(self, *args, **kwargs):
+        logging.debug('Initializing JAMboree GUI.')
         super().__init__(*args, **kwargs)
         
         self.ssh_client = None  
         computer_name = socket.gethostname()  # Get the computer's hostname
+        logging.debug(f'Computer hostname: {computer_name}')
+        
         self.title(f'{computer_name} - JAMboree')  # Set window title with computer name
         self.geometry('825x900')  # Adjust the size as needed        
         self.thin_geometry = '420x900'
@@ -54,9 +58,11 @@ class JAMboree_gui(tk.Tk):
         self.width = 1100
         self.height = 900
         self.full_geometry = f"{self.width}x{self.height}"
+        self.proc = None 
         
         self.ssh_username_var = tk.StringVar()  # No default value
         self.ssh_password_var = tk.StringVar()  # No default value
+        logging.debug('SSH variables initialized.')
         
         # Theme Colors
         self.bg_color = "#222222"  # Dark grey for background
@@ -64,21 +70,23 @@ class JAMboree_gui(tk.Tk):
         self.btn_bg = "#555555"  # Lighter grey for buttons
         self.entry_bg = "#555555"  # Lighter grey for entries
         self.btn_fg = "#ffffff"  # White text for buttons
+        logging.debug('Theme colors set.')
         
         # Load and resize the background image
         self.bg_image = Image.open("time-warp.jpg").resize((self.width, self.height), Image.Resampling.LANCZOS)
         self.bg_photo = ImageTk.PhotoImage(self.bg_image)
+        logging.debug('Background image loaded and resized.')
 
         # Create a canvas and set the background image
         self.canvas = tk.Canvas(self, width=self.width, height=self.height)
         self.canvas.pack(fill='both', expand=True)
         self.canvas.create_image(0, 0, image=self.bg_photo, anchor='nw')
+        logging.debug('Canvas created and background image set.')
 
         # Create a frame to hold the widgets
         self.frame = tk.Frame(self.canvas, bg='')  # Set background color to empty string
         self.frame.place(x=0, y=0, width=self.width, height=self.height)  # Adjust the placement as needed
-
-        #self.canvas.create_window((0, 0), window=self.frame, anchor='nw')
+        logging.debug('Main frame created and placed.')
 
         self.config_lock = threading.Lock()
         # Initialize storage lists
@@ -99,22 +107,29 @@ class JAMboree_gui(tk.Tk):
         self.button_press_times = {}  # Define before calling load_config
         self.output_text = tk.Text(self.frame, height=10, width=100, bg=self.bg_color, fg=self.fg_color, insertbackground=self.fg_color)
         self.output_text.grid(row=18, column=0, columnspan=10, pady=5, padx=10, sticky='w')
+        logging.debug('UI elements initialized.')
+
         self.unpair_sequence = ['Left', 'Down', 'Left', 'Right', 'Down', 'Right', 'Left', 'Left', 'Right', 'Right']  # was self.key_sequence
         self.debug_sequence = ['Left', 'Left', 'Right', 'Right', 'Up', 'Down', 'Up', 'Down']
         self.current_sequence = []
         self.unpair_btn = None  # This will hold the button widget once created
         self.load_credentials()  # Load credentials on startup
+        logging.debug('Initial setup complete.')
 
         self.setup_ui()
         self.protocol("WM_DELETE_WINDOW", self.on_close)
+        logging.debug('UI setup complete.')
 
     def __del__(self):
+        logging.debug('Destroying JAMboree GUI instance.')
         self.close_all_serial_connections()
         if self.ssh_client:
             self.ssh_client.close()  # Ensure the SSH connection is closed when the instance is deleted
+            logging.debug('SSH connection closed.')
         super().__del__()
 
     def setup_ui(self):
+        logging.debug('Setting up UI components.')
         self.configure(bg=self.bg_color)  # Set the background color of the root window
 
         style = ttk.Style()
@@ -128,15 +143,20 @@ class JAMboree_gui(tk.Tk):
         style.map('TCombobox', selectforeground=[('readonly', self.fg_color)])
         style.configure("TCheckbutton", background=self.bg_color, foreground=self.fg_color, focuscolor=style.configure(".")["background"])
         style.map("TCheckbutton", background=[('active', self.bg_color), ('selected', self.bg_color)])
-        
+        logging.debug('UI styles configured.')
+
         self.credentials_frame = ttk.Frame(self)
         self.credentials_frame.pack(fill='both', expand=True)
+        logging.debug('Credentials frame created and packed.')
 
         # Start Flask app in a separate thread
         self.flask_thread = Thread(target=lambda: app.run(host='0.0.0.0', port=5001, debug=True, use_reloader=False))
         self.flask_thread.start()
+        logging.debug('Flask app started in a separate thread.')
+
         self.extra_column_visible = False  # Control visibility of the master column
         self.thin_mode_active = False  # Control visibility of the master column
+        logging.debug('Initial UI state set.')
 
         # ttk.Label(self.frame, text='Select').grid(row=0, column=3)        
         ttk.Label(self.frame, text='STB Name', style='TLabel').grid(row=0, column=4, pady=(2,0), sticky='ew')
@@ -278,7 +298,7 @@ class JAMboree_gui(tk.Tk):
             'Play': ('15', 'p'),  
             'FWD': ('16', 'f'),
             '--- ': ('1', '2'),   
-            ' - ': ('1', '2'),    
+            'pair': ('pair', '2'),    
             ' ---': ('1', '2'),
             'vol+': ('17', 'V'),  
             'recall': ('18', 'R'),  
@@ -335,13 +355,17 @@ class JAMboree_gui(tk.Tk):
         open_DebugGUI_btn = ttk.Button(self.frame, text="Debug", command=self.open_DebugGUI, style='TButton')
         open_DebugGUI_btn.grid(row=1, column=2, sticky='ew', padx=2)
         
-        pair_btn = ttk.Button(self.frame, text="SGS Pair", command=lambda: self.process_button_press(None, 'pair'), style='TButton')
+        pair_btn = ttk.Button(self.frame, text="pair", command=lambda: self.process_button_press(None, 'pair'), style='TButton')
         pair_btn.grid(row=19, column=0, sticky='ew', padx=2, pady=2)
+        
+        pair_btn = ttk.Button(self.frame, text="SGS Pair", command=lambda: self.sgs_pair(), style='TButton')
+        pair_btn.grid(row=20, column=0, sticky='ew', padx=2, pady=2)
         
 
 
         self.apply_dark_theme(self.frame)
         self.refresh()
+        logging.debug('UI components setup complete.')
 
     def apply_dark_theme(self, parent):
         for widget in parent.winfo_children():
@@ -431,24 +455,30 @@ class JAMboree_gui(tk.Tk):
         self.send_reset_and_sat()
         self.scheduler.enter(600, 1, self.schedule_reset_and_sat)
         
-        
     def ensure_ssh_connection(self, linux_pc):
+        logging.debug(f"Ensuring SSH connection to {linux_pc}.")
         try:
             if self.ssh_client is None:
+                logging.debug("Creating new SSH client instance.")
                 self.ssh_client = paramiko.SSHClient()
                 self.ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
             if not self.ssh_client.get_transport() or not self.ssh_client.get_transport().is_active():
+                logging.debug("Establishing SSH connection.")
                 self.ssh_client.connect(linux_pc, username=self.ssh_username_var.get(), password=self.ssh_password_var.get())
                 self.output_text.insert(tk.END, "Connected to proxy. \n")
+                logging.info(f"Successfully connected to {linux_pc} via SSH.")
         except paramiko.AuthenticationException:
+            logging.error("SSH Authentication failed.")
             self.output_text.insert(tk.END, "Authentication failed, please check your username or password.\n")
         except paramiko.SSHException as e:
+            logging.error(f"SSH error: {str(e)}")
             self.output_text.insert(tk.END, f"SSH error: {str(e)}\n")
         except Exception as e:
+            logging.error(f"Connection error: {str(e)}")
             self.output_text.insert(tk.END, f"Connection error: {str(e)}\n")
             self.ssh_client = None  # Reset ssh_client if connection fails
-
+        
     def call_get_dev_logs(self):
         os.chdir(script_dir)
         linux_pc = self.linux_pc_var.get()
@@ -714,25 +744,27 @@ class JAMboree_gui(tk.Tk):
  
     def track_keys(self, event):
         key_name = event.keysym  # This gets the name of the key pressed
+        logging.debug(f"Key pressed: {key_name}")
         if key_name in ['Left', 'Right', 'Up', 'Down']:  # Only track arrow keys
             self.current_sequence.append(key_name)
-            print(f"Current sequence: {self.current_sequence}")  # Debugging output
-            
+            logging.debug(f"Current sequence: {self.current_sequence}")
+
             # Check if the current sequence matches the prefix of the target sequence
             if (self.current_sequence != self.debug_sequence[:len(self.current_sequence)] and
                 self.current_sequence != self.unpair_sequence[:len(self.current_sequence)]):
-                self.current_sequence = []  # Reset if any mismatch
-                print("Sequence mismatch - Resetting")  # Debugging output
-                
-            if self.current_sequence == self.unpair_sequence:
-                self.show_unpair_button()
-                self.current_sequence = []  # Reset if any mismatch
-                
-                
-            if self.current_sequence == self.debug_sequence:
-                self.open_DebugGUI()
+                logging.debug("Sequence mismatch, resetting sequence.")
                 self.current_sequence = []  # Reset if any mismatch
 
+            if self.current_sequence == self.unpair_sequence:
+                logging.info("Unpair sequence detected.")
+                self.show_unpair_button()
+                self.current_sequence = []  # Reset sequence
+
+            if self.current_sequence == self.debug_sequence:
+                logging.info("Debug sequence detected.")
+                self.open_DebugGUI()
+                self.current_sequence = []  # Reset sequence
+            
     def open_video_ui(self):
         if not hasattr(self, 'video_ui') or not self.video_ui.winfo_exists():
             self.video_ui = VideoUI(self)
@@ -768,7 +800,10 @@ class JAMboree_gui(tk.Tk):
             self.unpair_btn.grid_remove()  # This hides the button but does not destroy it
         print("Button hidden")  # Debugging output
 
-    def unpair_function(self):
+    def unpair_function(self):        
+        os.chdir(script_dir)
+        pygame.mixer.music.load('undo.mp3')        
+        pygame.mixer.music.play(-1)
         print("Unpairing...")
         for idx, var in enumerate(self.checkbox_vars):
             if var.get():  # Check if the checkbox for the STB is selected
@@ -777,43 +812,51 @@ class JAMboree_gui(tk.Tk):
                 self.after(3100, lambda: self.rf_remote(self.com_port, remote, 'pair_down', 80))  # Press 'pair_down'
                 self.after(6200, lambda: self.rf_remote(self.com_port, remote, 'pair_up', 80))  # Press 'pair_up' after previous delay
         self.after(6200, self.hide_unpair_button)
+        pygame.mixer.music.stop()
         
     def mark_logs(self):
-        
-        print("marking...")        
+        logging.info("Marking logs.")
         self.process_button_press(None, '13')
         self.after(3000, lambda: self.process_button_press(None, '38'))
         self.after(5000, lambda: self.process_button_press(1000, '11'))
-        
+        logging.debug("Log marking sequence executed.")
+
     def update_related_fields(self, event):
         selected_index = event.widget.current()
+        #logging.debug(f"Updating related fields based on selected index: {selected_index}")
         # Assuming that all comboboxes have the same index for related items
         self.stb_name_cb.current(selected_index)
         self.stb_rxid_cb.current(selected_index)
         self.stb_ip_cb.current(selected_index)
+        #logging.info(f"Related fields updated for index: {selected_index}")
         self.save_config()
 
     def update_remote_value(self, event):
         new_remote = self.new_remote_entry.get().strip()
+        logging.debug(f"Updating remote value to: {new_remote}")
         if new_remote and new_remote != 'enter new #':
-            selected_stb_name = self.stb_name_cb.get()  # Assume you have a Combobox for STB names
+            selected_stb_name = self.stb_name_cb.get()
             if selected_stb_name:
+                logging.info(f"Updating remote for STB: {selected_stb_name} to {new_remote}")
                 self.update_remote_in_config(selected_stb_name, new_remote)
                 self.refresh()  # Refresh the GUI
             self.new_remote_entry.delete(0, tk.END)
             self.entry_focus_out(None)  # Reset the placeholder text
-            
-    def update_remote_in_config(self, stb_name, new_remote):    
+
+    def update_remote_in_config(self, stb_name, new_remote):
+        logging.debug(f"Updating remote in config for {stb_name} to {new_remote}")
         os.chdir(script_dir)
-        with open(self.config_file, 'r') as file:
-            config_data = json.load(file)
-        if stb_name in self.config_data['stbs']:
-            config_data['stbs'][stb_name]['remote'] = new_remote  # Update the remote value
-            with open(config_file, 'w') as file:
-                json.dump(config_data, file, indent=4)
-               
-            print(f"Updated remote for {stb_name} to {new_remote}")
-    
+        try:
+            with open(self.config_file, 'r') as file:
+                config_data = json.load(file)
+            if stb_name in config_data['stbs']:
+                config_data['stbs'][stb_name]['remote'] = new_remote  # Update the remote value
+                with open(config_file, 'w') as file:
+                    json.dump(config_data, file, indent=4)
+                logging.info(f"Remote updated for {stb_name} to {new_remote}")
+        except Exception as e:
+            logging.error(f"Failed to update remote in config for {stb_name}: {str(e)}")        
+        
     def find_hoppers(self):
         try:
             os.chdir(script_dir)
@@ -889,14 +932,6 @@ class JAMboree_gui(tk.Tk):
         with open(self.config_file, 'w') as file:
             json.dump(self.config_data, file, indent=4)
 
-    def update_linux_pc_history(self, event=None):
-        # Update history list and dropdown if the new entry is not already in the list
-        new_entry = self.linux_pc_var.get()
-        if new_entry and new_entry not in self.linux_pc_history:
-            self.linux_pc_history.append(new_entry)
-            self.linux_pc_combobox['values'] = self.linux_pc_history
-        self.save_config()
-   
     def check_all(self):
         """Toggle all checkboxes based on the state of the 'Check All' checkbox."""
         is_checked = self.all_var.get()
@@ -905,22 +940,27 @@ class JAMboree_gui(tk.Tk):
         self.save_config()
 
     def set_all_protocols(self, event):
-        """Set all comboboxes to the selected protocol."""
         protocol = self.protocol_var.get()
+        logging.debug(f"Setting all protocols to: {protocol}")
         for combo in self.comboboxes:
             combo.set(protocol)
         self.save_config()
+        logging.info(f"All protocols set to {protocol} and configuration saved.")
 
     def start_timer(self, button_id):
         self.button_press_times[button_id] = int(time.time() * 1000)
-        
+        logging.debug(f"Timer started for button ID: {button_id}.")
+
     def on_com_select(self, event=None):
         selected_com_port = self.com_select.get().split(' ')[-1].strip('()')
+        logging.debug(f"COM port selected: {selected_com_port}")
         if selected_com_port and (selected_com_port != self.com_port):
             self.com_port = selected_com_port  # Update the current COM port
             self.open_serial_connection(self.com_port)
-            
+            logging.info(f"Serial connection opened on COM port: {self.com_port}")
+
     def open_serial_connection(self, com_port):
+        logging.debug(f"Attempting to open serial connection on COM port: {com_port}")
         if com_port not in self.serial_connections or not self.serial_connections[com_port].is_open:
             if com_port in self.serial_connections:
                 self.serial_connections[com_port].close()  # Close existing connection if open
@@ -933,28 +973,34 @@ class JAMboree_gui(tk.Tk):
                     stopbits=serial.STOPBITS_ONE, 
                     timeout=1
                 )
-                self.output_text.insert(tk.END, f" Opened: {com_port}\n")
+                self.output_text.insert(tk.END, f"Opened: {com_port}\n")
                 self.output_text.see(tk.END)  # Scroll to the bottom
+                logging.info(f"Serial connection opened on {com_port}.")
             except serial.SerialException as e:
+                logging.error(f"Failed to open serial port {com_port}: {str(e)}")
                 self.output_text.insert(tk.END, f"Failed to open serial port: {str(e)}\n")
                 self.output_text.see(tk.END)  # Scroll to the bottom
                 self.serial_connection = None
 
-
     def close_serial_connection(self, com_port):
+        logging.debug(f"Closing serial connection on COM port: {com_port}")
         if self.serial_connection and self.serial_connection.is_open:
             self.serial_connection.close()
             self.close_all_serial_connections()
+            logging.info(f"Serial connection closed on {com_port}.")
 
     def close_all_serial_connections(self):
+        logging.debug("Closing all serial connections.")
         for com_port, connection in self.serial_connections.items():
             if connection and connection.is_open:
                 connection.close()
                 self.output_text.insert(tk.END, f"Closed serial port: {com_port}\n")
                 self.output_text.see(tk.END)
+                logging.info(f"Serial port {com_port} closed.")
 
     def save_config(self):
         os.chdir(script_dir)
+        logging.debug("Saving configuration.")
         try:
             with open(self.config_file, 'r') as file:
                 config_data = json.load(file)
@@ -962,7 +1008,8 @@ class JAMboree_gui(tk.Tk):
             # Reset all entries to "is_recent": "false"
             for stb in config_data["stbs"].values():
                 stb["is_recent"] = "false"
-    
+                #logging.debug(f"Set is_recent to false for STB.")
+
             entries_per_row = 2
             num_rows = len(self.entries) // entries_per_row
 
@@ -977,7 +1024,6 @@ class JAMboree_gui(tk.Tk):
                 linux_pc = self.linux_pc_comboboxes[idx].get() if idx < len(self.linux_pc_comboboxes) else ""
                 com_port = self.com_port_comboboxes[idx].get() if idx < len(self.com_port_comboboxes) else ""
 
-                
                 if stb_name:
                     # Update or create new STB entry preserving existing data
                     stb_data = config_data["stbs"].get(stb_name, {})
@@ -992,11 +1038,10 @@ class JAMboree_gui(tk.Tk):
                         "is_recent": is_recent
                     })
                     config_data["stbs"][stb_name] = stb_data
-
-            
-            
+                    #logging.debug(f"Updated STB {stb_name} in config.")
+    
                 elif stb_name:
-                # Create a new entry if it does not exist
+                    # Create a new entry if it does not exist
                     config_data["stbs"][stb_name] = {
                         "stb": rxid,
                         "protocol": protocol,
@@ -1007,107 +1052,114 @@ class JAMboree_gui(tk.Tk):
                         "linux_pc": linux_pc,
                         "remote": str(idx + 1),
                         "is_recent": is_recent
-                    }        
+                    }
+                    logging.debug(f"Created new STB entry for {stb_name}.")
+    
             if self.com_port:
                 config_data["com_port"] = self.com_port
-
+                logging.debug(f"Updated COM port in config: {self.com_port}")
 
             with open(self.config_file, 'w') as file:
                 json.dump(config_data, file, indent=4)
-            
-            #print("Configuration saved.")
+                logging.info("Configuration saved.")
+
             self.config_data = config_data
         except Exception as e:
-            print("Failed to save configuration:", e)
+            logging.error(f"Failed to save configuration: {str(e)}")
 
     def load_config(self):
         self.stb_by_remote = {}
         os.chdir(script_dir)
+        #logging.debug("Loading configuration.")
         try:
             with open(self.config_file, 'r') as file:
                 self.config_data = json.load(file)
-                com_port = self.config_data.get("com_port", None)  # Load the COM port safely
+                #logging.debug("Configuration file loaded.")
 
-            
-        
-                # Check and refresh available COM ports
-                available_ports = self.find_serial_ports()
-                print(f"available ports: {available_ports}")
-                self.com_select['values'] = [f"{name}" for name in available_ports]
+            com_port = self.config_data.get("com_port", None)  # Load the COM port safely
 
-                # Attempt to open the serial connection
-                if com_port:
-                    self.com_port = com_port
-                    self.open_serial_connection(com_port)  # Safely open the connection with error handling
-                    
-                stbs_discovered = [stb for stb in self.config_data.get("stbs", {}).values() if str(stb.get('remote')) == "0"]
-                self.stb_name_cb['values'] = [name for name, stb in self.config_data["stbs"].items() if str(stb.get('remote')) == "0"]
-                self.stb_rxid_cb['values'] = [stb['stb'] for stb in stbs_discovered]  # Correct key for RxID
-                self.stb_ip_cb['values'] = [stb['ip'] for stb in stbs_discovered] 
-            
-                if stbs_discovered:
-                    # Automatically select the first entry by default (if it exists)
-                    self.stb_name_cb.current(0)
-                    self.stb_rxid_cb.current(0)
-                    self.stb_ip_cb.current(0)
-                    # No need to set 'new_remote_entry' as it is for user input to change 'remote'
+            # Check and refresh available COM ports
+            available_ports = self.find_serial_ports()
+            logging.debug(f"Available COM ports: {available_ports}")
+            self.com_select['values'] = [f"{name}" for name in available_ports]
 
+            # Attempt to open the serial connection
+            if com_port:
+                self.com_port = com_port
+                self.open_serial_connection(com_port)  # Safely open the connection with error handling
+                logging.info(f"Opened serial connection on COM port: {com_port}")
 
-                for idx in range(len(self.checkbox_vars)):
-                    remote_index = str(idx + 1)
-                    relevant_stbs = [name for name, data in self.config_data["stbs"].items() if data.get("remote") == remote_index]
-                    sorted_stbs = sorted(relevant_stbs, key=lambda x: self.config_data["stbs"][x].get("is_recent", "false"), reverse=True)
-                    self.stb_comboboxes[idx]['values'] = relevant_stbs  # Populate the combobox with all relevant STBs
+            stbs_discovered = [stb for stb in self.config_data.get("stbs", {}).values() if str(stb.get('remote')) == "0"]
+            self.stb_name_cb['values'] = [name for name, stb in self.config_data["stbs"].items() if str(stb.get('remote')) == "0"]
+            self.stb_rxid_cb['values'] = [stb['stb'] for stb in stbs_discovered]  # Correct key for RxID
+            self.stb_ip_cb['values'] = [stb['ip'] for stb in stbs_discovered]
+            #logging.debug(f"STBs discovered: {stbs_discovered}")
 
+            if stbs_discovered:
+                # Automatically select the first entry by default (if it exists)
+                self.stb_name_cb.current(0)
+                self.stb_rxid_cb.current(0)
+                self.stb_ip_cb.current(0)
+                logging.info("Automatically selected first STB entry.")
 
-                    if sorted_stbs:
-                        stb_name = sorted_stbs[0]  # Assume the first STB is the one to load
-                        data = self.config_data["stbs"].get(stb_name, {})
-                        base_index = idx * 2
-                        self.stb_comboboxes[idx].set(stb_name)
-                        self.entries[base_index].delete(0, tk.END)
-                        self.entries[base_index].insert(0, data.get("stb", ''))
-                        self.entries[base_index + 1].delete(0, tk.END)
-                        self.entries[base_index + 1].insert(0, data.get("ip", ''))
-                        self.comboboxes[idx].set(data.get("protocol", ''))
-                        self.checkbox_vars[idx].set(data.get("selected", False))
-                        self.linux_pc_comboboxes[idx]['values'] = self.get_combobox_values(data.get("linux_pc", ''), self.config_data["stbs"], "linux_pc")
-                        self.linux_pc_comboboxes[idx].set(data.get("linux_pc", ''))
-                        self.master_comboboxes[idx]['values'] = self.get_combobox_values(data.get("master_stb", ''), self.config_data["stbs"], "master_stb")
-                        self.master_comboboxes[idx].set(data.get("master_stb", ''))       
-                        self.com_port_comboboxes[idx]['values'] = self.get_combobox_values_with_available_ports(data.get("com_port", ''), available_ports)
-                        self.com_port_comboboxes[idx].set(data.get("com_port", ''))
+            for idx in range(len(self.checkbox_vars)):
+                remote_index = str(idx + 1)
+                relevant_stbs = [name for name, data in self.config_data["stbs"].items() if data.get("remote") == remote_index]
+                sorted_stbs = sorted(relevant_stbs, key=lambda x: self.config_data["stbs"][x].get("is_recent", "false"), reverse=True)
+                self.stb_comboboxes[idx]['values'] = relevant_stbs  # Populate the combobox with all relevant STBs
+
+                if sorted_stbs:
+                    stb_name = sorted_stbs[0]  # Assume the first STB is the one to load
+                    data = self.config_data["stbs"].get(stb_name, {})
+                    base_index = idx * 2
+                    self.stb_comboboxes[idx].set(stb_name)
+                    self.entries[base_index].delete(0, tk.END)
+                    self.entries[base_index].insert(0, data.get("stb", ''))
+                    self.entries[base_index + 1].delete(0, tk.END)
+                    self.entries[base_index + 1].insert(0, data.get("ip", ''))
+                    self.comboboxes[idx].set(data.get("protocol", ''))
+                    self.checkbox_vars[idx].set(data.get("selected", False))
+                    self.linux_pc_comboboxes[idx]['values'] = self.get_combobox_values(data.get("linux_pc", ''), self.config_data["stbs"], "linux_pc")
+                    self.linux_pc_comboboxes[idx].set(data.get("linux_pc", ''))
+                    self.master_comboboxes[idx]['values'] = self.get_combobox_values(data.get("master_stb", ''), self.config_data["stbs"], "master_stb")
+                    self.master_comboboxes[idx].set(data.get("master_stb", ''))
+                    self.com_port_comboboxes[idx]['values'] = self.get_combobox_values_with_available_ports(data.get("com_port", ''), available_ports)
+                    self.com_port_comboboxes[idx].set(data.get("com_port", ''))
+                    #logging.info(f"Loaded configuration for STB: {stb_name}.")
         except Exception as e:
-            print("Failed to load config:", e)
-
+            logging.error(f"Failed to load configuration: {str(e)}")
 
     def get_combobox_values(self, saved_value, stbs, key):
         values = list({data[key] for data in stbs.values() if key in data})  # Use a set to remove duplicates
         if saved_value in values:
             values.remove(saved_value)
         values.insert(0, saved_value)
+        #logging.debug(f"Combobox values for {key} generated: {values}")
         return values
-        
-        
+
     def get_combobox_values_with_available_ports(self, saved_value, available_ports):
         values = available_ports[:]
         if saved_value in values:
             values.remove(saved_value)
         values.insert(0, saved_value)
+        #logging.debug(f"Combobox values with available ports generated: {values}")
         return values
-        
+
     def find_serial_ports(self):
         ports = serial.tools.list_ports.comports()
         friendly_ports = [port.description.split(' ')[-1].strip('()') for port in ports]
-        #print("port: ", ports)
-        #print("friendly_ports: ", friendly_ports)
+        logging.debug(f"Found serial ports: {friendly_ports}")
         return friendly_ports
-        #return ports
 
     def refresh(self):
         self.load_config()
 
     def find_sgs(self):
+        
+        os.chdir(script_dir)
+        pygame.mixer.music.load('loading.mp3')
+        pygame.mixer.music.play(-1)
+        
         subnets = get_subnets_from_arp()
         if not subnets:
             print("No subnets found.")
@@ -1133,136 +1185,114 @@ class JAMboree_gui(tk.Tk):
             #print("Processed results")
            '''
         self.refresh()
+        pygame.mixer.music.stop()
     
-
     def process_button_press(self, event, button_id, stb_name=None):
+        logging.debug(f"Processing button press for button ID: {button_id}, STB Name: {stb_name}")
         start_time = self.button_press_times.get(button_id, int(time.time() * 1000))
         end_time = int(time.time() * 1000)
         delay = end_time - start_time
-        #button_name = next(name for name, id in self.buttons.items() if id == button_id)
         button_name = next((name for name, ids in self.buttons.items() if ids[0] == button_id), "Unknown")
+        logging.debug(f"Button pressed: {button_name} with delay: {delay}ms")
+
         self.save_config()
-        print("button_name:", button_name)
+
         if button_id == 'reset':
+            logging.info("Processing reset command for all COM ports.")
             all_com_ports = self.find_serial_ports()
-            # Send the reset command to each COM port
             for com_port in all_com_ports:
                 self.rf_remote(com_port, '1', button_id, delay)  # Assumes '1' is a valid remote ID for all cases
-        
+
         elif button_id == 'pair':
-            # Handle SGS Pairing
+            logging.info("Processing pairing sequence.")
             try:
                 with open(config_file, 'r') as file:
                     config_data = json.load(file)
 
                 selected_stbs = {name: details for name, details in config_data['stbs'].items() if details.get('selected')}
-                updated = False 
+                updated = False
                 for stb_name, stb_details in selected_stbs.items():
                     rxid = stb_details.get('stb', '')[:11]
                     stb_ip = stb_details.get('ip', '')
+                    logging.debug(f"Pairing STB: {stb_name} with RxID: {rxid} and IP: {stb_ip}")
                     self.sgs_pair(stb_name, stb_ip, rxid)
                     updated = True
                 if updated:
-                    print("Configurations updated successfully.")
+                    logging.info("Pairing configurations updated successfully.")
                 else:
-                    print("No STBs were selected for pairing.")
+                    logging.warning("No STBs were selected for pairing.")
 
             except Exception as e:
+                logging.error(f"Failed to process SGS Pair: {str(e)}")
                 self.output_text.insert(tk.END, f"Failed to process SGS Pair: {e}\n")
                 self.output_text.see(tk.END)
-            
         else:
+            logging.info(f"Processing command for button ID: {button_id}")
             try:
                 with open(config_file, 'r') as file:
                     config_data = json.load(file)
 
                 selected_stbs = {name: details for name, details in config_data['stbs'].items() if details.get('selected')}
                 for stb_name, stb_details in selected_stbs.items():
-                    rxid = stb_details.get('stb', '')[:11]  # Assume receiver ID is first 11 characters
+                    rxid = stb_details.get('stb', '')[:11]
                     stb_ip = stb_details.get('ip', '')
                     protocol = stb_details.get('protocol', '').lower()
                     com_port = stb_details.get('com_port', '')
                     remote = stb_details.get('remote', '')
-                    command = button_name 
-                    #print("stb_name:", stb_name)
-                    if protocol.lower() == 'sgs':
+                    command = button_name
+                    logging.debug(f"Processing command for STB: {stb_name}, Protocol: {protocol}")
+
+                    if protocol == 'sgs':
                         thread = threading.Thread(target=self.sgs_remote, args=(stb_name, stb_ip, rxid, command, delay))
-                        #print("thread:", thread)
                         thread.start()
-                    elif protocol.lower() == 'rf':
+                    elif protocol == 'rf':
                         self.rf_remote(com_port, remote, command, delay)
-                        
+
             except Exception as e:
+                logging.error(f"Failed to process button press: {str(e)}")
                 print(f"Failed to process button press: {e}")
-                            
-    def update_ssh_username_history(self, event=None):
-        # Update history list and dropdown if the new entry is not already in the list
-        new_entry = self.ssh_username_var.get()
-        if new_entry and new_entry not in self.ssh_username_history:
-            self.ssh_username_history.append(new_entry)
-            self.ssh_username_combobox['values'] = self.ssh_username_history
 
     def is_ip_local(self, stb_name, stb_ip):
-        #self.output_text.insert(tk.END, f"Checking if IP {stb_ip} is local...\n")
+        logging.debug(f"Checking if IP {stb_ip} for STB {stb_name} is local.")
         try:
             stb_ip_address = ipaddress.ip_address(stb_ip)
             is_local = False
             subnets = get_subnets_from_arp()
             is_local = any(stb_ip_address in subnet for subnet in subnets)
-            #is_local = ping_ip(stb_ip)
-            #print(f'pinging: {stb_ip}')
-            #self.output_text.insert(tk.END, f"Its not in subnets {stb_name} \n")
-            '''
-            if not is_local:
-                # If not on the same subnet, check if it is reachable via ping
-                try:
-                    # Ping the IP address
-                    if platform.system().lower() == "windows":
-                        ping_command = ['ping', '-n', '1', '-w', '400', str(stb_ip_address)]
-                    else:
-                        ping_command = ['ping', '-c', '1', '-W', '1', str(stb_ip_address)]
-                        
-                    result = subprocess.run(ping_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-                    #self.output_text.insert(tk.END, f"pinging {stb_name} {result}")
-                    if result.returncode == 0:
-                        is_local = True
-                    else:
-                        is_local = False
-                except Exception as ping_exception:
-                    self.output_text.insert(tk.END, f"Ping test failed for {stb_ip}: {str(ping_exception)}\n")
-                    is_local = False
-'''
+            logging.debug(f"Is {stb_ip} local? {is_local}")
         except ValueError as ve:
+            logging.error(f"Invalid IP address {stb_ip}: {str(ve)}")
             self.output_text.insert(tk.END, f"Invalid IP address {stb_ip}: {str(ve)}\n")
             return False
         except Exception as e:
+            logging.error(f"Error checking IP locality for {stb_ip}: {str(e)}")
             self.output_text.insert(tk.END, f"Error checking IP locality: {str(e)}\n")
             return False
 
         return is_local
-
+        
     def sgs_remote(self, stb_name, stb_ip, rxid, button_id, delay):
+        logging.debug(f"Sending SGS remote command to STB {stb_name} with IP {stb_ip}, RxID {rxid}, and button ID {button_id}")
         os.chdir(script_dir)
         stb_config = self.config_data['stbs'].get(stb_name, {})
-        linux_pc = stb_config.get('linux_pc', 'default_linux_ip')  # Fetch specific linux_pc or default
-        #print(f'linux pc {linux_pc}')
+        linux_pc = stb_config.get('linux_pc', 'default_linux_ip')
         command = get_sgs_codes(button_id, delay)
         lcmd = ["python", "sgs_remote.py", "-n", stb_name, command]
         rcmd = ["python", "sgs_remote.py", "-i", stb_ip, "-s", rxid, command]
-        
+
         def run_command():
             try:
                 if self.is_ip_local(stb_name, stb_ip):
-                    result = subprocess.run(lcmd, shell=True, check=True, stdout=subprocess.PIPE, stderr=    subprocess.PIPE)
+                    logging.debug(f"Executing SGS command locally for STB {stb_name}.")
+                    result = subprocess.run(lcmd, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                     output = result.stdout.decode() + result.stderr.decode()
                     self.output_text.insert(tk.END, f"SGS {stb_name} {output}")
                     self.output_text.see(tk.END)
-                    if f"Please enter PIN:" in output:
-                        print('enter PIN below')
+                    if "Please enter PIN:" in output:
+                        logging.info("PIN prompt detected.")
                         self.handle_pin_prompt(lcmd)
                 else:
-                    self.output_text.insert(tk.END, f"Reaching outside your network: {stb_name} \n")
-                    self.output_text.see(tk.END)
+                    logging.info(f"STB {stb_name} is outside local network. Using SSH to reach {linux_pc}.")
                     self.ensure_ssh_connection(linux_pc)
                     if self.ssh_client and self.ssh_client.get_transport().is_active():
                         try:
@@ -1274,94 +1304,85 @@ class JAMboree_gui(tk.Tk):
                             if "Please enter PIN:" in output:
                                 self.handle_pin_prompt(rcmd)
                         except paramiko.SSHException as e:
+                            logging.error(f"SSH command execution failed for STB {stb_name}: {str(e)}")
                             self.output_text.insert(tk.END, f"Failed to execute remote command: SSH error: {str(e)}\n")
                             if "unhandled type 3 ('unimplemented')" in str(e):
-                                self.output_text.insert(tk.END, "It seems the server does not support the     requested operation.\n")
+                                self.output_text.insert(tk.END, "It seems the server does not support the requested operation.\n")
                         except Exception as e:
+                            logging.error(f"Failed to execute remote command via SSH for STB {stb_name}: {str(e)}")
                             self.output_text.insert(tk.END, f"Failed to execute remote command: {str(e)}\n")
             except subprocess.CalledProcessError as e:
-                self.output_text.insert(tk.END, f"SGS remote command failed with exit status {e.returncode}: {e.    output.decode()}\n")
+                logging.error(f"SGS remote command failed for STB {stb_name} with exit status {e.returncode}: {e.output.decode()}")
+                self.output_text.insert(tk.END, f"SGS remote command failed with exit status {e.returncode}: {e.output.decode()}\n")
                 self.output_text.see(tk.END)
             except Exception as e:
+                logging.error(f"An error occurred during SGS remote execution for STB {stb_name}: {str(e)}")
                 self.output_text.insert(tk.END, f"An error occurred during SGS remote execution: {str(e)}\n")
                 self.output_text.see(tk.END)
 
         # Start the command in a new thread
         thread = threading.Thread(target=run_command)
         thread.start()
-
                                     
     def on_close(self):
-            self.save_config()
-            if self.ssh_client:
-                self.ssh_client.close()
-            self.destroy()
-            self.close_all_serial_connections()
-            JAMboree_gui().mainloop()  # Reopen the window
-          
-    def run_sgs_remote(self, cmd, stb_name, timeout=10):
-        try:
-            result = subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout)
-            self.output_text.insert(tk.END, f"SGS {stb_name} ")
-            self.output_text.insert(tk.END, f"{result.stdout.decode()}")
-            self.output_text.see(tk.END)
-        #except subprocess.TimeoutExpired:
-            #self.output_text.insert(tk.END, f"Timeout: Command took too long and was aborted.\n")
-            #self.output_text.see(tk.END)
-        except subprocess.CalledProcessError as e:
-            self.output_text.insert(tk.END, f"Error: {e.stderr.decode()}\n")
-            self.output_text.see(tk.END)
+        logging.info("Closing application and saving configuration.")
+        self.save_config()
+        if self.ssh_client:
+            self.ssh_client.close()
+        self.destroy()
+        self.close_all_serial_connections()
+        logging.info("Restarting JAMboree GUI.")
+        JAMboree_gui().mainloop()  # Reopen the window
 
     def rf_remote(self, com_port, remote, button_id, delay):
-        #com_port = self.com_port_comboboxes[idx].get()
-
-        if button_id.lower() == ('live'):
-            delay = 1100        
-        if button_id.lower().startswith('lp'):
+        logging.debug(f"Sending RF remote command to COM port {com_port}, Remote {remote}, Button ID {button_id}, Delay {delay}")
+        if button_id.lower() == 'live' or button_id.lower().startswith('lp'):
             delay = 1100
-        # Strip 'LP' from button_id
-            button_id = button_id[2:]
+            button_id = button_id[2:] if button_id.lower().startswith('lp') else button_id
+
         try:
-            delay = int(delay)  # Ensure delay is an integer
+            delay = int(delay)
         except ValueError:
+            logging.error(f"Invalid delay value: {delay}")
             return jsonify({'error': 'Invalid delay value'}), 400
-        if delay < 80 :
+
+        if delay < 80:
             delay = 80
+
         button_codes = get_button_codes(button_id)
-        #self.handle_command(button_id, int(delay))
-        self.output_text.insert(tk.END, f"RF {com_port} {remote} : {button_id} {delay} ")
-        self.output_text.see(tk.END)
         if not button_codes:
+            logging.error(f"Button ID {button_id} not recognized.")
             return jsonify({'error': f'Button ID {button_id} not recognized'}), 404
+
         if not self.serial_connection or self.serial_connection.port != com_port:
+            logging.warning(f"Port {com_port} closed. Trying to reconnect.")
             self.output_text.insert(tk.END, "Port closed: Trying to reconnect...\n")
-            self.output_text.see(tk.END)  # Scroll to the bottom
+            self.output_text.see(tk.END)
             self.open_serial_connection(com_port)
             time.sleep(1)
             if not self.serial_connection or not self.serial_connection.is_open:
+                logging.error(f"Failed to open serial port {com_port}.")
                 self.output_text.insert(tk.END, "Failed to open serial port. Please check the connection.\n")
-                self.output_text.see(tk.END)  # Scroll to the bottom
+                self.output_text.see(tk.END)
                 return
-        if self.serial_connection and self.serial_connection.is_open:        
-            if button_id == 'reset':
-                cmd = "reset"		
-            else: 
-                KEY_CMD = button_codes['KEY_CMD']
-                KEY_RELEASE = button_codes['KEY_RELEASE']
-                cmd = f"{KEY_CMD} {KEY_RELEASE}"
+
+        if self.serial_connection and self.serial_connection.is_open:
             try:
-                message = f"{remote} {cmd} {delay}\n".encode('utf-8')
+                command = f"{button_codes['KEY_CMD']} {button_codes['KEY_RELEASE']}" if button_id != 'reset' else "reset"
+                message = f"{remote} {command} {delay}\n".encode('utf-8')
                 self.serial_connection.write(message)
                 self.serial_connection.flush()
                 time.sleep((delay + 30) / 1000.0)
                 response = self.serial_connection.read_all().decode('utf-8').strip()
-                self.output_text.insert(tk.END,f"{response}\n")
-                self.output_text.see(tk.END) 
-                
+                logging.debug(f"RF command response: {response}")
+                self.output_text.insert(tk.END, f"{response}\n")
+                self.output_text.see(tk.END)
             except serial.SerialException as e:
+                logging.error(f"Failed to send RF command: {str(e)}")
                 self.output_text.insert(tk.END, f"Failed to send RF command: {str(e)}\n")
-                self.output_text.see(tk.END) 
+                self.output_text.see(tk.END)
                 return f"Failed to send RF command: {str(e)}", 500
+
         return response, 200
 			
     def check_channel(self):
@@ -1552,7 +1573,7 @@ class JAMboree_gui(tk.Tk):
             self.output_text.insert(tk.END, f"{cmd}\n")
             self.output_text.see(tk.END)
             try:
-                self.proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1, universal_newlines=True)
+                self.proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderrG=subprocess.PIPE, text=True, bufsize=1, universal_newlines=True)
                 full_output = ""
                 while True:
                     output = self.proc.stdout.readline()
@@ -1648,9 +1669,9 @@ class JAMboree_gui(tk.Tk):
         except Exception as e:
             print(f"Failed to update configuration for {stb_name}: {e}")
 
-@app.route('/')
+@app.route('/remote')
 def home():
-    return render_template('JAMboree.html')
+    return render_template('JAMboRemote.html')
     
 @app.route('/base.txt')
 def base_txt():
@@ -1658,7 +1679,26 @@ def base_txt():
     return send_from_directory('base.txt')
     
 
-@app.route('/55/<remote>/<button_id>/<delay>', methods=['GET', 'POST'])
+
+@app.route('/settops', methods=['GET', 'POST'], strict_slashes=False)
+def settops():
+    return render_template('settops.html')
+
+
+@app.route('/base', methods=['GET', 'POST'], strict_slashes=False)
+def handle_base():
+    if request.method == 'GET':
+        with open(config_file, 'r') as f:
+            data = json.load(f)
+        return jsonify(data)
+    
+    elif request.method == 'POST':
+        new_data = request.json
+        with open(config_file, 'w') as f:
+            json.dump(new_data, f, indent=4)
+        return jsonify({"success": True})    
+
+@app.route('/55/<remote>/<button_id>/<delay>', methods=['GET', 'POST'], strict_slashes=False)
 def handle_55_remote(remote, button_id, delay):
     os.chdir(script_dir)
     remote = remote.lstrip('0')  # Strip leading zeros from the remote value
@@ -1676,16 +1716,17 @@ def handle_55_remote(remote, button_id, delay):
     except Exception as e:
         return jsonify({'error': str(e), 'timestamp': datetime.now(timezone.utc).isoformat()}), 500
     
-@app.route('/rf/<remote>/<stb_name>/<button_id>/<delay>/', methods=['GET', 'POST'])
+@app.route('/rf/<remote>/<stb_name>/<button_id>/<delay>/', methods=['GET', 'POST'], strict_slashes=False)
 def handle_54_remote(remote, stb_name, button_id, delay):
     # Call the instance method from the Flask app
     response = app.config['controller'].rf_remote(com_port, remote, button_id, delay)
     return jsonify({'response': response})
-       
-@app.route('/auto/<remote>/<stb_name>/<button_id>/<delay>/', methods=['GET', 'POST'])
+
+        
+@app.route('/auto/<remote>/<stb_name>/<button_id>/<delay>/', methods=['GET', 'POST'], strict_slashes=False)
+@app.route('/auto/<remote>/<stb_name>/<button_id>/<delay>', methods=['GET', 'POST'], strict_slashes=False)
 def handle_auto_remote(remote, stb_name, button_id, delay):
     # Call the instance method from the Flask app
-    #response = app.config['controller'].rf_remote(remote, button_id, delay)
     os.chdir(script_dir)
     try:
         delay = int(delay)  # Ensure delay is an integer
@@ -1701,7 +1742,7 @@ def handle_auto_remote(remote, stb_name, button_id, delay):
         rxid = stb_details.get('stb')
         com_port = stb_details.get('com_port')
         protocol = stb_details.get('protocol')
-        #print("Discovered IPs:", stb_ip)
+        remote = stb_details.get('remote')
 
         if not all([stb_ip, rxid]):
             return jsonify({'error': 'Incomplete STB details'}), 400
@@ -1709,12 +1750,10 @@ def handle_auto_remote(remote, stb_name, button_id, delay):
         if protocol == 'RF':
             response = app.config['controller'].rf_remote(com_port, remote, button_id, delay)
         
-        if protocol == 'SGS':
+        elif protocol == 'SGS':
             response = app.config['controller'].sgs_remote(stb_name, stb_ip, rxid, button_id, delay)
-        # Assuming `sgs_remote` is properly defined in your controller
-        #response = app.config['controller'].rf_remote(com_port, remote, button_id, delay)
-        #response = app.config['controller'].sgs_remote(stb_name, stb_ip, rxid, button_id, delay)
-        return jsonify({'response': response})
+        
+        return jsonify({'response': response, 'timestamp': datetime.now(timezone.utc).isoformat()})
 
     except FileNotFoundError:
         return jsonify({'error': 'Configuration file not found'}), 500
@@ -1723,7 +1762,7 @@ def handle_auto_remote(remote, stb_name, button_id, delay):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/sgs/<remote>/<stb_name>/<button_id>/<delay>/', methods=['GET', 'POST'])
+@app.route('/sgs/<remote>/<stb_name>/<button_id>/<delay>/', methods=['GET', 'POST'], strict_slashes=False)
 def handle_sgs_remote(remote, stb_name, button_id, delay):
     os.chdir(script_dir)
     try:
@@ -1755,7 +1794,7 @@ def handle_sgs_remote(remote, stb_name, button_id, delay):
         return jsonify({'error': str(e)}), 500
 
 
-@app.route('/triggered/<date>/<machine_name>/<stb_name>/<category_id>/<event_id>', methods=['GET', 'POST'])
+@app.route('/triggered/<date>/<machine_name>/<stb_name>/<category_id>/<event_id>', methods=['GET', 'POST'], strict_slashes=False)
 def triggered(date, machine_name, stb_name, category_id, event_id):
     
     try:
@@ -1816,13 +1855,13 @@ def triggered(date, machine_name, stb_name, category_id, event_id):
 fetcher = JAMboree_gui()
 
 
-@app.route('/54/<remote>/<button_id>', methods=['GET', 'POST'])
+@app.route('/54/<remote>/<button_id>', methods=['GET', 'POST'], strict_slashes=False)
 def handle_54_remote_defaultdelay(remote, button_id):
     # Call the instance method from the Flask app
     response = app.config['controller'].rf_remote(com_port, remote, button_id, "80")
     return jsonify({'0response': response})
     
-@app.route('/sgs/<remote>/<button_id>', methods=['GET', 'POST'])
+@app.route('/sgs/<remote>/<button_id>', methods=['GET', 'POST'], strict_slashes=False)
 def handle_sgs_remote_defaultdelay(remote, button_id):
     # Call the instance method from the Flask app
     response = app.config['controller'].sgs_remote(remote, button_id, "80")
@@ -1862,6 +1901,181 @@ def update_stb_config(stbName, selectedId, isSelected):
     # Here, implement the logic to update your configuration file or database
     # This is just a placeholder
     return True
+
+
+@app.route('/apps')
+def index():
+    return render_template('dayJAM.html')
+
+@app.route('/api/apps', methods=['GET'])
+def get_apps_list():
+    apps_list_file = 'apps_list.json'
+    try:
+        with open(apps_list_file, 'r') as json_file:
+            apps_list = json.load(json_file)
+        return jsonify(apps_list)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/load_app', methods=['POST'])
+def load_app():
+    logging.debug("Received request to load app.")
+    data = request.json
+    selected_file = data.get('app')
+    selected_stb = data.get('stb')
+    logging.debug(f"Selected app: {selected_file}, Selected STB: {selected_stb}")
+
+    if not selected_file or not selected_stb:
+        logging.error("App or STB not selected.")
+        return jsonify({'error': 'App or STB not selected'}), 400
+
+    try:
+        # Load configuration
+        with open(config_file, 'r') as file:
+            config_data = json.load(file)
+            stbs = config_data.get('stbs', {})
+            stb_info = stbs.get(selected_stb)
+            if not stb_info:
+                logging.error(f"STB {selected_stb} not found in configuration.")
+                return jsonify({'error': f"STB {selected_stb} not found in configuration"}), 404
+
+            stb_ip = stb_info.get('ip')
+            linux_pc = stb_info.get('linux_pc')
+            logging.debug(f"STB IP: {stb_ip}, Linux PC: {linux_pc}")
+
+            if not stb_ip:
+                logging.error(f"Failed to find IP for STB: {selected_stb}")
+                return jsonify({'error': f"Failed to find IP for STB: {selected_stb}"}), 404
+
+        # Load credentials
+        credentials = load_credentials()
+        username = credentials.get('username')
+        password = credentials.get('password')
+        logging.debug(f"Loaded credentials for user: {username}")
+
+        # Establish SSH connection
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(linux_pc, username=username, password=password)
+        sftp = ssh.open_sftp()
+        logging.info(f"Connected to Linux PC: {linux_pc}")
+
+        # Safely process the selected file name
+        if ' - ' in selected_file:
+            app_filename = selected_file.split(' - ')[1]
+        else:
+            app_filename = selected_file
+            logging.warning(f"Unexpected file format for selected_file: {selected_file}. Using full string as app filename.")
+
+        cc_share = f"/ccshare/linux/c_files/signed-browser-applications/internal/{app_filename}"
+        local_apps = os.path.join(apps_dir, app_filename)
+        linux_pc_dir = f'/home/{username}/stbmnt/apps/'
+        linux_pc_app = os.path.join(linux_pc_dir, app_filename)
+
+        logging.debug(f"App filename: {app_filename}, CC Share Path: {cc_share}, Local Apps Path: {local_apps}, Linux PC App Path: {linux_pc_app}")
+
+        # Ensure the local apps directory exists
+        if not os.path.exists(apps_dir):
+            os.makedirs(apps_dir)
+            logging.info(f"Created local apps directory: {apps_dir}")
+
+        # Download the app if not already available locally
+        if not os.path.exists(local_apps):
+            logging.info(f"Downloading {app_filename} from CC Share.")
+            sftp.get(cc_share, local_apps)
+        else:
+            logging.info(f"{app_filename} already exists locally, skipping download.")
+
+        # Ensure the Linux PC directory exists
+        try:
+            sftp.chdir(linux_pc_dir)
+            logging.info(f"Changed to Linux PC directory: {linux_pc_dir}")
+        except IOError:
+            logging.info(f"Creating directory on Linux PC: {linux_pc_dir}")
+            ssh.exec_command(f"mkdir -p {linux_pc_dir}")
+
+        # Upload the app to the Linux PC if it does not already exist there
+        try:
+            sftp.stat(linux_pc_app)
+            logging.info(f"App already exists on Linux PC: {linux_pc_app}")
+        except FileNotFoundError:
+            logging.info(f"Uploading {app_filename} to Linux PC.")
+            sftp.put(local_apps, linux_pc_app)
+
+        sftp.close()
+        ssh.close()
+        logging.info(f"App {app_filename} loaded successfully onto {linux_pc}.")
+        run_commands_over_ssh(linux_pc, username, password, stb_ip, app_filename)
+
+        return jsonify({'status': 'App loaded successfully on linux mount'})
+
+    except Exception as e:
+        logging.error(f"Error during app load: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+        
+def run_commands_over_ssh(linux_pc, username, password, stb_ip, app):
+    logging.debug("Starting run_commands_over_ssh function.")
+    logging.debug(f"Parameters received - Linux PC: {linux_pc}, Username: {username}, STB IP: {stb_ip}, App: {app}")
+
+    try:
+        logging.info(f"Attempting to SSH into {linux_pc}.")
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(linux_pc, username=username, password=password)
+        logging.info(f"SSH connection established with {linux_pc}.")
+
+        linux_pc_stbmnt = f'/home/{username}/stbmnt'
+        tnet_remote_path = f"{linux_pc_stbmnt}/tnet.jam"
+        tnet_local = 'tnet.jam'
+
+        logging.debug(f"Remote tnet.jam path: {tnet_remote_path}, Local tnet.jam path: {tnet_local}")
+
+        # Using SFTP to check and upload the tnet.jam file
+        sftp = ssh.open_sftp()
+
+        try:
+            logging.info(f"Uploading tnet.jam to {linux_pc}:{tnet_remote_path}.")
+            sftp.put(tnet_local, tnet_remote_path)
+            logging.debug(f"tnet.jam uploaded successfully to {tnet_remote_path}.")
+        except FileNotFoundError:
+            logging.error(f"tnet.jam not found locally or unable to upload to {tnet_remote_path}.")
+            raise
+
+        sftp.close()
+
+        # Command to be executed on the remote Linux PC
+        command = f"expect {tnet_remote_path} {stb_ip} apps {app}"
+        logging.info(f"Running command on {linux_pc}: {command}")
+
+        stdin, stdout, stderr = ssh.exec_command(command)
+
+        output = stdout.read().decode()
+        error = stderr.read().decode()
+
+        if output:
+            logging.info(f"Output from tnet command:\n{output}")
+        if error:
+            logging.error(f"Error from tnet command:\n{error}")
+
+        ssh.close()
+        logging.info("SSH connection closed.")
+
+    except Exception as e:
+        logging.error(f"Failed to execute commands over SSH: {e}")
+    finally:
+        logging.info("Stopping any music playback.")
+        pygame.mixer.music.stop()
+
+@app.route('/hostname')
+def hostname():
+    return jsonify(hostname=socket.gethostname())
+        
+
+def get_linux_pc_from_config(stbs):
+    with open(config_file, 'r') as file:
+        config_data = json.load(file)
+    linux_pc = next(iter(config_data['stbs'].values()))['linux_pc']  # Fetch any linux_pc from the config
+    return linux_pc
 
 if __name__ == '__main__':
     # app = JAMboree_gui()

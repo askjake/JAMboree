@@ -1,0 +1,2183 @@
+{
+    "HECV211-16_raw": "HECV211-16 stb=R1912226744-65 ip=172.20.110.56 (v0001_client_d25efc4ef5797503b2a52ff846e0a58152ff704e:7ce0be36447fafc8545485a34eebea9b55a51cd7) rid=XAFe02be904fd57\r\n  --- request:   {\"command\": \"attach\", \"receiver\": \"XAFe02be904fd57\", \"stb\": \"R1912226744-65\", \"tv_id\": 0, \"attr\": 1}\r\n  --- response:  {\"cid\":2002,\"result\":1}\r\r\n\r\r\n\r\n  --- request:   {\"command\": \"dish_ip_get_opened_multicasts\", \"cid\": 2002, \"receiver\": \"XAFe02be904fd57\"}\r\n  --- response:  {\"tuners\":[{\"tuner_id\":0,\"network_id\":4100,\"transport_id\":18,\"multicasts\":[{\"pid\":331,\"address\":\"239.0.1.149\",\"port\":5500,\"status\":1},{\"pid\":18,\"address\":\"239.0.1.129\",\"port\":5500,\"status\":1},{\"pid\":2352,\"address\":\"239.0.1.130\",\"port\":5500,\"status\":4},{\"pid\":20,\"address\":\"239.0.1.129\",\"port\":5500,\"status\":1},{\"pid\":5416,\"address\":\"239.0.1.134\",\"port\":5500,\"status\":1},{\"pid\":5410,\"address\":\"239.0.1.134\",\"port\":5500,\"status\":1},{\"pid\":5411,\"address\":\"239.0.1.134\",\"port\":5500,\"status\":1},{\"pid\":0,\"address\":\"239.0.1.128\",\"port\":5500,\"status\":1},{\"pid\":1,\"address\":\"239.0.1.128\",\"port\":5500,\"status\":1},{\"pid\":288,\"address\":\"239.0.1.131\",\"port\":5500,\"status\":1},{\"pid\":25,\"address\":\"224.0.23.14\",\"port\":3937,\"status\":1},{\"pid\":24,\"address\":\"224.0.23.14\",\"port\":3937,\"status\":1}]},{\"tuner_id\":1,\"network_id\":4102,\"transport_id\":216,\"multicasts\":[{\"pid\":2352,\"address\":\"239.0.2.21\",\"port\":5500,\"status\":4}]}],\"result\":1}\r\r\n\r\r\n\r\n  --- request:   {\"command\": \"get_tuner_usage_v2\", \"cid\": 2002, \"receiver\": \"XAFe02be904fd57\"}\r\n  --- response:  {\"tuner_usage_list\":[{\"tuner\":0,\"usage\":1,\"tuner_type\":1,\"title\":\"Family Matters\",\"receiver\":\"R1912226744-65\",\"cid\":400,\"name\":\"Living Room 1\",\"svc\":61664,\"vtype\":2,\"attr\":4096,\"tv_id\":0,\"tm_left\":23,\"mpaa\":5,\"tv_rating\":3,\"ex_rating\":0,\"status\":0,\"dvr_id\":0,\"src\":0,\"type\":0,\"linked_index\":0},{\"tuner\":1,\"usage\":0,\"tuner_type\":1,\"title\":\"\",\"receiver\":\"\",\"cid\":0,\"name\":\"\",\"svc\":0,\"vtype\":0,\"attr\":0,\"tv_id\":0,\"tm_left\":0,\"mpaa\":0,\"tv_rating\":0,\"ex_rating\":0,\"status\":0,\"dvr_id\":0,\"src\":0,\"type\":0,\"linked_index\":0}],\"result\":1 }\r\r\n\r\r\n\r\nTuner 0  ts_id 18  net_id 4100\r\n type sat       usage TV+      status locked    ( AV      )   by (cid  400) Living Room 1    [61664] Family Matters\r\n      331 (0x014b) ECM    :      239.0.1.149:5500   - (1) OK\r\n       18 (0x0012) EIT    :      239.0.1.129:5500   - (1) OK\r\n     2352 (0x0930) HERMES :      239.0.1.130:5500   - (4) Conn Lost\r\n       20 (0x0014) TDT    :      239.0.1.129:5500   - (1) OK\r\n     5416 (0x1528) INVIDI :      239.0.1.134:5500   - (1) OK\r\n     5410 (0x1522) VID    :      239.0.1.134:5500   - (1) OK\r\n     5411 (0x1523) AUD-1  :      239.0.1.134:5500   - (1) OK\r\n        0 (0x0000) PAT    :      239.0.1.128:5500   - (1) OK\r\n        1 (0x0001) CAT    :      239.0.1.128:5500   - (1) OK\r\n      288 (0x0120) EMM    :      239.0.1.131:5500   - (1) OK\r\n       25 (0x0019) SST    :      224.0.23.14:3937   - (1) OK\r\n       24 (0x0018) PGT    :      224.0.23.14:3937   - (1) OK\r\n\r\nTuner 1  ts_id 216  net_id 4102\r\n type sat       usage free     status locked    (         )   by (cid    0)                  [0] \r\n     2352 (0x0930) HERMES :       239.0.2.21:5500   - (4) Conn Lost\r\n\r\n",
+    "HECV211-16": [
+        {
+            "tuner_id": 0,
+            "network_id": 4100,
+            "transport_id": 14,
+            "multicasts": [
+                {
+                    "pid": 397,
+                    "address": "239.0.1.86",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 2352,
+                    "address": "239.0.1.67",
+                    "port": 5500,
+                    "status": 4
+                },
+                {
+                    "pid": 20,
+                    "address": "239.0.1.66",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 4647,
+                    "address": "239.0.1.78",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 4642,
+                    "address": "239.0.1.78",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 4643,
+                    "address": "239.0.1.78",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 0,
+                    "address": "239.0.1.65",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 1,
+                    "address": "239.0.1.65",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 288,
+                    "address": "239.0.1.68",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 25,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 1
+                },
+                {
+                    "pid": 24,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 1
+                }
+            ],
+            "tuner": 0,
+            "usage": 1,
+            "tuner_type": 1,
+            "title": "Who's the Boss?",
+            "receiver": "R1912226744-65",
+            "cid": 400,
+            "name": "Living Room 1",
+            "svc": 61673,
+            "vtype": 2,
+            "attr": 4096,
+            "tv_id": 0,
+            "tm_left": 1,
+            "mpaa": 5,
+            "tv_rating": 4,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0,
+            "linked_index": 0
+        },
+        {
+            "tuner_id": 1,
+            "network_id": 4102,
+            "transport_id": 216,
+            "multicasts": [
+                {
+                    "pid": 2352,
+                    "address": "239.0.2.21",
+                    "port": 5500,
+                    "status": 4
+                }
+            ],
+            "tuner": 1,
+            "usage": 0,
+            "tuner_type": 1,
+            "title": "",
+            "receiver": "",
+            "cid": 0,
+            "name": "",
+            "svc": 0,
+            "vtype": 0,
+            "attr": 0,
+            "tv_id": 0,
+            "tm_left": 0,
+            "mpaa": 0,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0,
+            "linked_index": 0
+        }
+    ],
+    "XIP712-1": [],
+    "XIP712-2": [
+        {
+            "tuner_id": 0,
+            "network_id": 4100,
+            "transport_id": 19,
+            "multicasts": [
+                {
+                    "pid": 1355,
+                    "address": "239.0.3.75",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 20,
+                    "address": "239.0.3.24",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 6183,
+                    "address": "239.0.3.27",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 6178,
+                    "address": "239.0.3.27",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 6179,
+                    "address": "239.0.3.27",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 1,
+                    "address": "239.0.3.23",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 0,
+                    "address": "239.0.3.23",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 288,
+                    "address": "239.0.3.26",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 25,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 1
+                },
+                {
+                    "pid": 24,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 1
+                },
+                {
+                    "pid": 2311,
+                    "address": "239.0.3.24",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 2352,
+                    "address": "239.0.3.25",
+                    "port": 5500,
+                    "status": 4
+                }
+            ],
+            "tuner": 0,
+            "usage": 1,
+            "tuner_type": 1,
+            "title": "The Andy Griffith Show",
+            "receiver": "R1886471010-28",
+            "cid": 400,
+            "name": "R1886471010-28",
+            "svc": 106,
+            "vtype": 1,
+            "attr": 4096,
+            "tv_id": 0,
+            "tm_left": 13,
+            "mpaa": 5,
+            "tv_rating": 4,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0,
+            "linked_index": 0
+        },
+        {
+            "tuner_id": 1,
+            "network_id": 4100,
+            "transport_id": 19,
+            "multicasts": [
+                {
+                    "pid": 790,
+                    "address": "239.0.3.68",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 0,
+                    "address": "239.0.3.23",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 1,
+                    "address": "239.0.3.23",
+                    "port": 5500,
+                    "status": 1
+                }
+            ],
+            "tuner": 1,
+            "usage": 5,
+            "tuner_type": 1,
+            "title": "",
+            "receiver": "",
+            "cid": 0,
+            "name": "",
+            "svc": 0,
+            "vtype": 0,
+            "attr": 0,
+            "tv_id": 0,
+            "tm_left": 0,
+            "mpaa": 0,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0,
+            "linked_index": 0
+        }
+    ],
+    "XIP712-3": [],
+    "ZIP1018-4": [
+        {
+            "tuner_id": 0,
+            "network_id": 4102,
+            "transport_id": 217,
+            "multicasts": [
+                {
+                    "pid": 2352,
+                    "address": "239.0.3.199",
+                    "port": 5500,
+                    "status": 4
+                },
+                {
+                    "pid": 2311,
+                    "address": "239.0.3.198",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 288,
+                    "address": "0.0.0.0",
+                    "port": 0,
+                    "status": 0
+                },
+                {
+                    "pid": 25,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 1
+                },
+                {
+                    "pid": 24,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 1
+                }
+            ],
+            "tuner": 0,
+            "usage": 0,
+            "tuner_type": 1,
+            "title": "",
+            "receiver": "",
+            "cid": 0,
+            "name": "",
+            "svc": 0,
+            "vtype": 0,
+            "attr": 0,
+            "tv_id": 0,
+            "tm_left": 0,
+            "mpaa": 0,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0,
+            "linked_index": 0
+        },
+        {
+            "tuner_id": 1,
+            "network_id": 4100,
+            "transport_id": 21,
+            "multicasts": [
+                {
+                    "pid": 1387,
+                    "address": "239.0.4.170",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 18,
+                    "address": "239.0.4.75",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 2352,
+                    "address": "239.0.4.76",
+                    "port": 5500,
+                    "status": 4
+                },
+                {
+                    "pid": 20,
+                    "address": "239.0.4.75",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 4904,
+                    "address": "239.0.4.156",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 4899,
+                    "address": "239.0.4.156",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 4898,
+                    "address": "239.0.4.156",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 4900,
+                    "address": "239.0.4.156",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 1,
+                    "address": "239.0.4.74",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 0,
+                    "address": "239.0.4.74",
+                    "port": 5500,
+                    "status": 1
+                }
+            ],
+            "tuner": 1,
+            "usage": 1,
+            "tuner_type": 1,
+            "title": "Star Wars: The Force Awakens",
+            "receiver": "R1911703992-06",
+            "cid": 400,
+            "name": "ZIP1018-4",
+            "svc": 61678,
+            "vtype": 2,
+            "attr": 4096,
+            "tv_id": 0,
+            "tm_left": 12,
+            "mpaa": 2,
+            "tv_rating": 0,
+            "ex_rating": 9,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0,
+            "linked_index": 0
+        },
+        {
+            "tuner_id": 2,
+            "network_id": 4100,
+            "transport_id": 16,
+            "multicasts": [
+                {
+                    "pid": 1371,
+                    "address": "239.0.2.22",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 5667,
+                    "address": "239.0.1.228",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 5666,
+                    "address": "239.0.1.228",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 1,
+                    "address": "239.0.1.211",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 0,
+                    "address": "239.0.1.211",
+                    "port": 5500,
+                    "status": 1
+                }
+            ],
+            "tuner": 2,
+            "usage": 1,
+            "tuner_type": 1,
+            "title": "Card Sharks",
+            "receiver": "",
+            "cid": 200,
+            "name": "",
+            "svc": 245,
+            "vtype": 1,
+            "attr": 4608,
+            "tv_id": 0,
+            "tm_left": 12,
+            "mpaa": 5,
+            "tv_rating": 3,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0,
+            "linked_index": 0
+        },
+        {
+            "tuner_id": 3,
+            "network_id": 4100,
+            "transport_id": 19,
+            "multicasts": [
+                {
+                    "pid": 790,
+                    "address": "239.0.3.68",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 0,
+                    "address": "239.0.3.23",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 1,
+                    "address": "239.0.3.23",
+                    "port": 5500,
+                    "status": 1
+                }
+            ],
+            "tuner": 3,
+            "usage": 5,
+            "tuner_type": 1,
+            "title": "",
+            "receiver": "",
+            "cid": 0,
+            "name": "",
+            "svc": 0,
+            "vtype": 0,
+            "attr": 0,
+            "tv_id": 0,
+            "tm_left": 0,
+            "mpaa": 0,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0,
+            "linked_index": 0
+        }
+    ],
+    "ZIP1018-5": [
+        {
+            "tuner_id": 0,
+            "network_id": 4100,
+            "transport_id": 14,
+            "multicasts": [
+                {
+                    "pid": 4147,
+                    "address": "239.0.1.192",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 4146,
+                    "address": "239.0.1.192",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 0,
+                    "address": "239.0.1.188",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 1,
+                    "address": "239.0.1.188",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 2311,
+                    "address": "239.0.1.189",
+                    "port": 5500,
+                    "status": 5
+                },
+                {
+                    "pid": 25,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 1
+                },
+                {
+                    "pid": 24,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 1
+                }
+            ],
+            "tuner": 0,
+            "usage": 1,
+            "tuner_type": 1,
+            "title": "Wild Sunflowers DISH scape",
+            "receiver": "R1971323490-93",
+            "cid": 93,
+            "name": "R1971323490-93",
+            "svc": 101,
+            "vtype": 2,
+            "attr": 4096,
+            "tv_id": 0,
+            "tm_left": 251,
+            "mpaa": 5,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0
+        },
+        {
+            "tuner_id": 1,
+            "network_id": 4102,
+            "transport_id": 219,
+            "multicasts": [
+                {
+                    "pid": 1343,
+                    "address": "239.0.3.222",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 6951,
+                    "address": "239.0.3.208",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 6946,
+                    "address": "239.0.3.208",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 6947,
+                    "address": "239.0.3.208",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 0,
+                    "address": "239.0.3.200",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 1,
+                    "address": "239.0.3.200",
+                    "port": 5500,
+                    "status": 1
+                }
+            ],
+            "tuner": 1,
+            "usage": 1,
+            "tuner_type": 1,
+            "title": "The Simpsons",
+            "receiver": "R1911704038-53",
+            "cid": 400,
+            "name": "Living Room 1",
+            "svc": 61665,
+            "vtype": 2,
+            "attr": 4098,
+            "tv_id": 0,
+            "tm_left": 1603,
+            "mpaa": 5,
+            "tv_rating": 4,
+            "ex_rating": 19,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0
+        },
+        {
+            "tuner_id": 2,
+            "network_id": 4102,
+            "transport_id": 210,
+            "multicasts": [
+                {
+                    "pid": 1336,
+                    "address": "239.0.1.104",
+                    "port": 5500,
+                    "status": 0
+                },
+                {
+                    "pid": 6691,
+                    "address": "239.0.1.86",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 6690,
+                    "address": "239.0.1.86",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 1,
+                    "address": "239.0.1.71",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 0,
+                    "address": "239.0.1.71",
+                    "port": 5500,
+                    "status": 1
+                }
+            ],
+            "tuner": 2,
+            "usage": 1,
+            "tuner_type": 1,
+            "title": "Down to Earth",
+            "receiver": "",
+            "cid": 200,
+            "name": "",
+            "svc": 286,
+            "vtype": 1,
+            "attr": 4608,
+            "tv_id": 0,
+            "tm_left": 11,
+            "mpaa": 5,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0
+        },
+        {
+            "tuner_id": 3,
+            "network_id": 4102,
+            "transport_id": 216,
+            "multicasts": [
+                {
+                    "pid": 2352,
+                    "address": "239.0.2.49",
+                    "port": 5500,
+                    "status": 4
+                },
+                {
+                    "pid": 288,
+                    "address": "239.0.2.50",
+                    "port": 5500,
+                    "status": 1
+                }
+            ],
+            "tuner": 3,
+            "usage": 0,
+            "tuner_type": 1,
+            "title": "",
+            "receiver": "",
+            "cid": 0,
+            "name": "",
+            "svc": 0,
+            "vtype": 0,
+            "attr": 0,
+            "tv_id": 0,
+            "tm_left": 0,
+            "mpaa": 0,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0
+        },
+        {
+            "tuner_id": 4,
+            "network_id": 4102,
+            "transport_id": 217,
+            "multicasts": [
+                {
+                    "pid": 2352,
+                    "address": "239.0.3.199",
+                    "port": 5500,
+                    "status": 4
+                }
+            ],
+            "tuner": 4,
+            "usage": 0,
+            "tuner_type": 1,
+            "title": "",
+            "receiver": "",
+            "cid": 0,
+            "name": "",
+            "svc": 0,
+            "vtype": 0,
+            "attr": 0,
+            "tv_id": 0,
+            "tm_left": 0,
+            "mpaa": 0,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0
+        }
+    ],
+    "ZIP1018-6": [
+        {
+            "tuner_id": 0,
+            "network_id": 4102,
+            "transport_id": 216,
+            "multicasts": [
+                {
+                    "pid": 2311,
+                    "address": "239.0.2.48",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 2352,
+                    "address": "239.0.2.49",
+                    "port": 5500,
+                    "status": 4
+                },
+                {
+                    "pid": 288,
+                    "address": "239.0.2.50",
+                    "port": 5500,
+                    "status": 1
+                }
+            ],
+            "tuner": 0,
+            "usage": 0,
+            "tuner_type": 1,
+            "title": "",
+            "receiver": "",
+            "cid": 0,
+            "name": "",
+            "svc": 0,
+            "vtype": 0,
+            "attr": 0,
+            "tv_id": 0,
+            "tm_left": 0,
+            "mpaa": 0,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0,
+            "linked_index": 0
+        },
+        {
+            "tuner_id": 3,
+            "network_id": 4100,
+            "transport_id": 14,
+            "multicasts": [
+                {
+                    "pid": 16,
+                    "address": "239.0.1.189",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 2352,
+                    "address": "239.0.1.190",
+                    "port": 5500,
+                    "status": 4
+                },
+                {
+                    "pid": 20,
+                    "address": "239.0.1.189",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 4147,
+                    "address": "239.0.1.192",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 4146,
+                    "address": "239.0.1.192",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 1,
+                    "address": "239.0.1.188",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 0,
+                    "address": "239.0.1.188",
+                    "port": 5500,
+                    "status": 1
+                }
+            ],
+            "tuner": 3,
+            "usage": 1,
+            "tuner_type": 1,
+            "title": "Wild Sunflowers DISH scape",
+            "receiver": "",
+            "cid": 200,
+            "name": "",
+            "svc": 101,
+            "vtype": 2,
+            "attr": 4608,
+            "tv_id": 0,
+            "tm_left": 252,
+            "mpaa": 5,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0,
+            "linked_index": 0
+        },
+        {
+            "tuner_id": 16,
+            "network_id": 65299,
+            "transport_id": 501,
+            "multicasts": [
+                {
+                    "pid": 129,
+                    "address": "239.0.5.130",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 132,
+                    "address": "239.0.5.130",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 8187,
+                    "address": "239.0.5.124",
+                    "port": 5500,
+                    "status": 1
+                }
+            ],
+            "tuner": 16,
+            "usage": 1,
+            "tuner_type": 2,
+            "title": "QVC",
+            "receiver": "R1911703088-93",
+            "cid": 400,
+            "name": "Living Room 1",
+            "svc": 63855,
+            "vtype": 2,
+            "attr": 4096,
+            "tv_id": 0,
+            "tm_left": 12,
+            "mpaa": 6,
+            "tv_rating": 6,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0,
+            "linked_index": 0
+        }
+    ],
+    "HEVC211-7": [],
+    "HEVC211-8": [
+        {
+            "tuner_id": 0,
+            "network_id": 4102,
+            "transport_id": 216,
+            "multicasts": [
+                {
+                    "pid": 2352,
+                    "address": "239.0.2.49",
+                    "port": 5500,
+                    "status": 4
+                },
+                {
+                    "pid": 288,
+                    "address": "239.0.2.50",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 25,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 1
+                },
+                {
+                    "pid": 24,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 1
+                }
+            ],
+            "tuner": 0,
+            "usage": 0,
+            "tuner_type": 1,
+            "title": "",
+            "receiver": "",
+            "cid": 0,
+            "name": "",
+            "svc": 0,
+            "vtype": 0,
+            "attr": 0,
+            "tv_id": 0,
+            "tm_left": 0,
+            "mpaa": 0,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0,
+            "linked_index": 0
+        },
+        {
+            "tuner_id": 1,
+            "network_id": 4102,
+            "transport_id": 216,
+            "multicasts": [
+                {
+                    "pid": 2352,
+                    "address": "239.0.2.49",
+                    "port": 5500,
+                    "status": 4
+                },
+                {
+                    "pid": 20,
+                    "address": "239.0.2.48",
+                    "port": 5500,
+                    "status": 1
+                }
+            ],
+            "tuner": 1,
+            "usage": 0,
+            "tuner_type": 1,
+            "title": "",
+            "receiver": "",
+            "cid": 0,
+            "name": "",
+            "svc": 0,
+            "vtype": 0,
+            "attr": 0,
+            "tv_id": 0,
+            "tm_left": 0,
+            "mpaa": 0,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0,
+            "linked_index": 0
+        }
+    ],
+    "HEVC211-9": [
+        {
+            "tuner_id": 0,
+            "network_id": 0,
+            "transport_id": 0,
+            "multicasts": [
+                {
+                    "pid": 25,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 0
+                },
+                {
+                    "pid": 24,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 0
+                }
+            ],
+            "tuner": 0,
+            "usage": 9,
+            "tuner_type": 1,
+            "title": "",
+            "receiver": "",
+            "cid": 0,
+            "name": "",
+            "svc": 0,
+            "vtype": 0,
+            "attr": 0,
+            "tv_id": 0,
+            "tm_left": 0,
+            "mpaa": 0,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0,
+            "linked_index": 0
+        }
+    ],
+    "HEVC211-10": [
+        {
+            "tuner_id": 0,
+            "network_id": 4100,
+            "transport_id": 19,
+            "multicasts": [
+                {
+                    "pid": 792,
+                    "address": "239.0.3.68",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 0,
+                    "address": "239.0.3.23",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 1,
+                    "address": "239.0.3.23",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 2352,
+                    "address": "239.0.3.25",
+                    "port": 5500,
+                    "status": 4
+                },
+                {
+                    "pid": 2311,
+                    "address": "239.0.3.24",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 288,
+                    "address": "239.0.3.26",
+                    "port": 5500,
+                    "status": 1
+                }
+            ],
+            "tuner": 0,
+            "usage": 5,
+            "tuner_type": 1,
+            "title": "",
+            "receiver": "",
+            "cid": 0,
+            "name": "",
+            "svc": 0,
+            "vtype": 0,
+            "attr": 0,
+            "tv_id": 0,
+            "tm_left": 0,
+            "mpaa": 0,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0,
+            "linked_index": 0
+        },
+        {
+            "tuner_id": 1,
+            "network_id": 4102,
+            "transport_id": 219,
+            "multicasts": [
+                {
+                    "pid": 1343,
+                    "address": "239.0.3.222",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 18,
+                    "address": "239.0.3.201",
+                    "port": 5500,
+                    "status": 5
+                },
+                {
+                    "pid": 2352,
+                    "address": "239.0.3.202",
+                    "port": 5500,
+                    "status": 5
+                },
+                {
+                    "pid": 20,
+                    "address": "239.0.3.201",
+                    "port": 5500,
+                    "status": 5
+                },
+                {
+                    "pid": 6951,
+                    "address": "239.0.3.208",
+                    "port": 5500,
+                    "status": 5
+                },
+                {
+                    "pid": 6946,
+                    "address": "239.0.3.208",
+                    "port": 5500,
+                    "status": 5
+                },
+                {
+                    "pid": 6947,
+                    "address": "239.0.3.208",
+                    "port": 5500,
+                    "status": 5
+                },
+                {
+                    "pid": 0,
+                    "address": "239.0.3.200",
+                    "port": 5500,
+                    "status": 5
+                },
+                {
+                    "pid": 1,
+                    "address": "239.0.3.200",
+                    "port": 5500,
+                    "status": 5
+                }
+            ],
+            "tuner": 1,
+            "usage": 1,
+            "tuner_type": 1,
+            "title": "The Simpsons",
+            "receiver": "R1886471404-26",
+            "cid": 402,
+            "name": "R1886471404-26",
+            "svc": 61665,
+            "vtype": 2,
+            "attr": 1,
+            "tv_id": 0,
+            "tm_left": 12,
+            "mpaa": 5,
+            "tv_rating": 4,
+            "ex_rating": 19,
+            "status": 0,
+            "dvr_id": 94,
+            "src": 0,
+            "type": 0,
+            "linked_index": 0
+        }
+    ],
+    "ZIP1018-11": [
+        {
+            "tuner_id": 0,
+            "network_id": 4102,
+            "transport_id": 216,
+            "multicasts": [
+                {
+                    "pid": 18,
+                    "address": "239.0.2.48",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 20,
+                    "address": "239.0.2.48",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 2311,
+                    "address": "239.0.2.48",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 288,
+                    "address": "239.0.2.50",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 25,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 1
+                },
+                {
+                    "pid": 24,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 1
+                }
+            ],
+            "tuner": 0,
+            "usage": 0,
+            "tuner_type": 1,
+            "title": "",
+            "receiver": "",
+            "cid": 0,
+            "name": "",
+            "svc": 0,
+            "vtype": 0,
+            "attr": 0,
+            "tv_id": 0,
+            "tm_left": 0,
+            "mpaa": 0,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0
+        },
+        {
+            "tuner_id": 2,
+            "network_id": 4102,
+            "transport_id": 219,
+            "multicasts": [
+                {
+                    "pid": 1325,
+                    "address": "239.0.3.222",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 5156,
+                    "address": "239.0.3.209",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 5155,
+                    "address": "239.0.3.209",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 5154,
+                    "address": "239.0.3.209",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 1,
+                    "address": "239.0.3.200",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 0,
+                    "address": "239.0.3.200",
+                    "port": 5500,
+                    "status": 1
+                }
+            ],
+            "tuner": 2,
+            "usage": 1,
+            "tuner_type": 1,
+            "title": "Zombies",
+            "receiver": "",
+            "cid": 200,
+            "name": "",
+            "svc": 61712,
+            "vtype": 2,
+            "attr": 4608,
+            "tv_id": 0,
+            "tm_left": 97,
+            "mpaa": 5,
+            "tv_rating": 3,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0
+        },
+        {
+            "tuner_id": 16,
+            "network_id": 65299,
+            "transport_id": 501,
+            "multicasts": [
+                {
+                    "pid": 132,
+                    "address": "239.0.5.130",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 129,
+                    "address": "239.0.5.130",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 8187,
+                    "address": "239.0.5.124",
+                    "port": 5500,
+                    "status": 1
+                }
+            ],
+            "tuner": 16,
+            "usage": 1,
+            "tuner_type": 2,
+            "title": "QVC",
+            "receiver": "R1956349185-98",
+            "cid": 400,
+            "name": "Living Room 1",
+            "svc": 63855,
+            "vtype": 2,
+            "attr": 4096,
+            "tv_id": 0,
+            "tm_left": 12,
+            "mpaa": 6,
+            "tv_rating": 6,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0
+        }
+    ],
+    "XIP712-12": [
+        {
+            "tuner_id": 0,
+            "network_id": 4100,
+            "transport_id": 19,
+            "multicasts": [
+                {
+                    "pid": 18,
+                    "address": "239.0.3.24",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 800,
+                    "address": "239.0.3.68",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 0,
+                    "address": "239.0.3.23",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 20,
+                    "address": "239.0.3.24",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 1,
+                    "address": "239.0.3.23",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 2311,
+                    "address": "239.0.3.24",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 288,
+                    "address": "239.0.3.26",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 25,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 1
+                },
+                {
+                    "pid": 24,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 1
+                }
+            ],
+            "tuner": 0,
+            "usage": 5,
+            "tuner_type": 1,
+            "title": "",
+            "receiver": "",
+            "cid": 0,
+            "name": "",
+            "svc": 0,
+            "vtype": 0,
+            "attr": 0,
+            "tv_id": 0,
+            "tm_left": 0,
+            "mpaa": 0,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0
+        },
+        {
+            "tuner_id": 1,
+            "network_id": 4100,
+            "transport_id": 14,
+            "multicasts": [
+                {
+                    "pid": 4147,
+                    "address": "239.0.1.192",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 4146,
+                    "address": "239.0.1.192",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 0,
+                    "address": "239.0.1.188",
+                    "port": 5500,
+                    "status": 5
+                },
+                {
+                    "pid": 1,
+                    "address": "239.0.1.188",
+                    "port": 5500,
+                    "status": 5
+                }
+            ],
+            "tuner": 1,
+            "usage": 1,
+            "tuner_type": 1,
+            "title": "Wild Sunflowers DISH scape",
+            "receiver": "R1963244619-33",
+            "cid": 400,
+            "name": "R1963244619-33",
+            "svc": 199,
+            "vtype": 2,
+            "attr": 4096,
+            "tv_id": 0,
+            "tm_left": 252,
+            "mpaa": 5,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0
+        }
+    ],
+    "HEVC211-13": [
+        {
+            "tuner_id": 0,
+            "network_id": 0,
+            "transport_id": 0,
+            "multicasts": [
+                {
+                    "pid": 25,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 1
+                },
+                {
+                    "pid": 24,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 1
+                },
+                {
+                    "pid": 2352,
+                    "address": "239.0.2.49",
+                    "port": 5500,
+                    "status": 0
+                }
+            ],
+            "tuner": 0,
+            "usage": 0,
+            "tuner_type": 1,
+            "title": "",
+            "receiver": "",
+            "cid": 0,
+            "name": "",
+            "svc": 0,
+            "vtype": 0,
+            "attr": 0,
+            "tv_id": 0,
+            "tm_left": 0,
+            "mpaa": 0,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0,
+            "linked_index": 0
+        },
+        {
+            "tuner_id": 1,
+            "network_id": 4100,
+            "transport_id": 19,
+            "multicasts": [
+                {
+                    "pid": 331,
+                    "address": "239.0.3.74",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 18,
+                    "address": "239.0.3.24",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 20,
+                    "address": "239.0.3.24",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 288,
+                    "address": "239.0.3.26",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 6183,
+                    "address": "239.0.3.27",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 6178,
+                    "address": "239.0.3.27",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 6179,
+                    "address": "239.0.3.27",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 0,
+                    "address": "239.0.3.23",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 1,
+                    "address": "239.0.3.23",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 2352,
+                    "address": "239.0.3.25",
+                    "port": 5500,
+                    "status": 4
+                }
+            ],
+            "tuner": 1,
+            "usage": 1,
+            "tuner_type": 1,
+            "title": "The Andy Griffith Show",
+            "receiver": "R1946890461-63",
+            "cid": 400,
+            "name": "R1946890461-63",
+            "svc": 106,
+            "vtype": 1,
+            "attr": 4096,
+            "tv_id": 0,
+            "tm_left": 12,
+            "mpaa": 5,
+            "tv_rating": 4,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0,
+            "linked_index": 0
+        }
+    ],
+    "ZIP1018-14": [
+        {
+            "tuner_id": 0,
+            "network_id": 4102,
+            "transport_id": 216,
+            "multicasts": [
+                {
+                    "pid": 2290,
+                    "address": "239.0.2.79",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 0,
+                    "address": "239.0.2.47",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 1,
+                    "address": "239.0.2.47",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 288,
+                    "address": "239.0.2.50",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 2311,
+                    "address": "239.0.2.48",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 25,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 1
+                },
+                {
+                    "pid": 24,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 1
+                }
+            ],
+            "tuner": 0,
+            "usage": 7,
+            "tuner_type": 1,
+            "title": "",
+            "receiver": "",
+            "cid": 0,
+            "name": "",
+            "svc": 0,
+            "vtype": 0,
+            "attr": 0,
+            "tv_id": 0,
+            "tm_left": 0,
+            "mpaa": 0,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0
+        },
+        {
+            "tuner_id": 2,
+            "network_id": 4100,
+            "transport_id": 12,
+            "multicasts": [
+                {
+                    "pid": 1406,
+                    "address": "239.0.1.149",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 4136,
+                    "address": "239.0.1.133",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 4131,
+                    "address": "239.0.1.133",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 4130,
+                    "address": "239.0.1.133",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 0,
+                    "address": "239.0.1.127",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 1,
+                    "address": "239.0.1.127",
+                    "port": 5500,
+                    "status": 1
+                }
+            ],
+            "tuner": 2,
+            "usage": 1,
+            "tuner_type": 1,
+            "title": "Seinfeld",
+            "receiver": "",
+            "cid": 200,
+            "name": "",
+            "svc": 61647,
+            "vtype": 2,
+            "attr": 4608,
+            "tv_id": 0,
+            "tm_left": 12,
+            "mpaa": 5,
+            "tv_rating": 4,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0
+        },
+        {
+            "tuner_id": 3,
+            "network_id": 4100,
+            "transport_id": 19,
+            "multicasts": [
+                {
+                    "pid": 18,
+                    "address": "239.0.3.24",
+                    "port": 5500,
+                    "status": 6
+                },
+                {
+                    "pid": 20,
+                    "address": "239.0.3.24",
+                    "port": 5500,
+                    "status": 6
+                }
+            ],
+            "tuner": 3,
+            "usage": 0,
+            "tuner_type": 1,
+            "title": "",
+            "receiver": "",
+            "cid": 0,
+            "name": "",
+            "svc": 0,
+            "vtype": 0,
+            "attr": 0,
+            "tv_id": 0,
+            "tm_left": 0,
+            "mpaa": 0,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0
+        }
+    ],
+    "XIP712-15": [
+        {
+            "tuner_id": 0,
+            "network_id": 4100,
+            "transport_id": 19,
+            "multicasts": [
+                {
+                    "pid": 18,
+                    "address": "239.0.3.24",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 790,
+                    "address": "239.0.3.68",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 0,
+                    "address": "239.0.3.23",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 20,
+                    "address": "239.0.3.24",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 1,
+                    "address": "239.0.3.23",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 2311,
+                    "address": "239.0.3.24",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 288,
+                    "address": "239.0.3.26",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 25,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 1
+                },
+                {
+                    "pid": 24,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 1
+                }
+            ],
+            "tuner": 0,
+            "usage": 5,
+            "tuner_type": 1,
+            "title": "",
+            "receiver": "",
+            "cid": 0,
+            "name": "",
+            "svc": 0,
+            "vtype": 0,
+            "attr": 0,
+            "tv_id": 0,
+            "tm_left": 0,
+            "mpaa": 0,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0
+        },
+        {
+            "tuner_id": 1,
+            "network_id": 4100,
+            "transport_id": 20,
+            "multicasts": [
+                {
+                    "pid": 1437,
+                    "address": "239.0.3.98",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 7464,
+                    "address": "239.0.3.87",
+                    "port": 5500,
+                    "status": 5
+                },
+                {
+                    "pid": 7459,
+                    "address": "239.0.3.87",
+                    "port": 5500,
+                    "status": 5
+                },
+                {
+                    "pid": 7458,
+                    "address": "239.0.3.87",
+                    "port": 5500,
+                    "status": 5
+                },
+                {
+                    "pid": 1,
+                    "address": "239.0.3.76",
+                    "port": 5500,
+                    "status": 5
+                },
+                {
+                    "pid": 0,
+                    "address": "239.0.3.76",
+                    "port": 5500,
+                    "status": 5
+                }
+            ],
+            "tuner": 1,
+            "usage": 1,
+            "tuner_type": 1,
+            "title": "Alaskan Bush People",
+            "receiver": "R1911088562-63",
+            "cid": 400,
+            "name": "Hopper Duo Beta 2",
+            "svc": 61724,
+            "vtype": 2,
+            "attr": 4096,
+            "tv_id": 0,
+            "tm_left": 12,
+            "mpaa": 5,
+            "tv_rating": 4,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0
+        }
+    ],
+    "XiP813-26": [
+        {
+            "tuner_id": 0,
+            "network_id": 4100,
+            "transport_id": 14,
+            "multicasts": [
+                {
+                    "pid": 2352,
+                    "address": "239.0.1.190",
+                    "port": 5500,
+                    "status": 4
+                },
+                {
+                    "pid": 2311,
+                    "address": "239.0.1.189",
+                    "port": 5500,
+                    "status": 5
+                },
+                {
+                    "pid": 25,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 1
+                },
+                {
+                    "pid": 24,
+                    "address": "224.0.23.14",
+                    "port": 3937,
+                    "status": 1
+                }
+            ],
+            "tuner": 0,
+            "usage": 0,
+            "tuner_type": 1,
+            "title": "",
+            "receiver": "",
+            "cid": 0,
+            "name": "",
+            "svc": 0,
+            "vtype": 0,
+            "attr": 0,
+            "tv_id": 0,
+            "tm_left": 0,
+            "mpaa": 0,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0,
+            "linked_index": 0
+        },
+        {
+            "tuner_id": 1,
+            "network_id": 4100,
+            "transport_id": 14,
+            "multicasts": [
+                {
+                    "pid": 4147,
+                    "address": "239.0.1.192",
+                    "port": 5500,
+                    "status": 5
+                },
+                {
+                    "pid": 4146,
+                    "address": "239.0.1.192",
+                    "port": 5500,
+                    "status": 5
+                },
+                {
+                    "pid": 1,
+                    "address": "239.0.1.188",
+                    "port": 5500,
+                    "status": 5
+                },
+                {
+                    "pid": 0,
+                    "address": "239.0.1.188",
+                    "port": 5500,
+                    "status": 5
+                },
+                {
+                    "pid": 288,
+                    "address": "239.0.1.191",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 2352,
+                    "address": "239.0.1.190",
+                    "port": 5500,
+                    "status": 4
+                }
+            ],
+            "tuner": 1,
+            "usage": 1,
+            "tuner_type": 1,
+            "title": "American Harbor DISH scape",
+            "receiver": "",
+            "cid": 200,
+            "name": "",
+            "svc": 101,
+            "vtype": 2,
+            "attr": 4608,
+            "tv_id": 0,
+            "tm_left": 0,
+            "mpaa": 5,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0,
+            "linked_index": 0
+        },
+        {
+            "tuner_id": 2,
+            "network_id": 4102,
+            "transport_id": 217,
+            "multicasts": [
+                {
+                    "pid": 2384,
+                    "address": "239.0.4.182",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 2352,
+                    "address": "239.0.3.199",
+                    "port": 5500,
+                    "status": 4
+                }
+            ],
+            "tuner": 2,
+            "usage": 0,
+            "tuner_type": 1,
+            "title": "",
+            "receiver": "",
+            "cid": 0,
+            "name": "",
+            "svc": 0,
+            "vtype": 0,
+            "attr": 0,
+            "tv_id": 0,
+            "tm_left": 0,
+            "mpaa": 0,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0,
+            "linked_index": 0
+        },
+        {
+            "tuner_id": 16,
+            "network_id": 65289,
+            "transport_id": 463,
+            "multicasts": [
+                {
+                    "pid": 53,
+                    "address": "239.0.5.111",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 49,
+                    "address": "239.0.5.111",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 52,
+                    "address": "239.0.5.111",
+                    "port": 5500,
+                    "status": 1
+                },
+                {
+                    "pid": 8187,
+                    "address": "239.0.5.99",
+                    "port": 5500,
+                    "status": 1
+                }
+            ],
+            "tuner": 16,
+            "usage": 1,
+            "tuner_type": 2,
+            "title": "2024 Paris Olympics",
+            "receiver": "R1911704179-95",
+            "cid": 400,
+            "name": "Living Room 1",
+            "svc": 63844,
+            "vtype": 2,
+            "attr": 4096,
+            "tv_id": 0,
+            "tm_left": 90,
+            "mpaa": 5,
+            "tv_rating": 0,
+            "ex_rating": 0,
+            "status": 0,
+            "dvr_id": 0,
+            "src": 0,
+            "type": 0,
+            "linked_index": 0
+        }
+    ],
+    "Wireless-40": []
+}

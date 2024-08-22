@@ -7,16 +7,17 @@ def get_button_codes(button_id):
 
 
 def get_sgs_codes(button_id, delay):
-    if button_id == 'Home' and delay >= 1000:
+    button_id = button_id.lower()
+    if button_id == 'home' and delay >= 1000:
         button_id = 'Sys Info'
-    elif button_id == 'Back' and delay >= 1000:
+    elif button_id == 'back' and delay >= 1000:
         button_id = 'Live TV'
     elif button_id == 'ddiamond':
         button_id = 'PiP Toggle'
-    elif button_id == 'FWD':
+    elif button_id == 'fwd':
         if delay >= 1000:
             button_id = 'Fast Forward'
-    elif button_id == 'RWD':
+    elif button_id == 'rwd':
         if delay >= 1000:
             button_id = 'Rewind'
     
@@ -61,11 +62,13 @@ button_id_to_number = {
     'recall': '18',
     'ch+': '19',
     'ch_up': '19',
+    'chup': '19',
     'channel_up': '19',
     'vol-': '20',
     'mute': '21',
     'ch-': '22',
     'ch_down': '22',
+    'chdown': '22',
     'channel_down': '22',
     '1': '23',
     '2': '24',
@@ -105,7 +108,8 @@ button_id_to_number = {
     'pip toggle': '44',
     'fast forward': '160',
     'skip forward': '16',
-    'dvr_guide': '42'
+    'dvr_guide': '42',
+    'pair': 'pair'
     
 
 }

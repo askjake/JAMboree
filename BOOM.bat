@@ -1,15 +1,30 @@
 @echo off
-setlocal
+REM Change to the directory where the batch file is located
+cd /d %~dp0
 
 REM Set the Python version
 set PYTHON_VERSION=3.11.0
 
-REM Check Python installation and set up the virtual environment
-python -m venv vJAM
+REM Check if Python is in the PATH
+python --version >nul 2>&1
+if errorlevel 1 (
+    echo Python is not found in PATH. Attempting to add it...
+    set "PYTHON_PATH=C:\Python%PYTHON_VERSION%"
+    setx PATH "%PYTHON_PATH%;%PYTHON_PATH%\Scripts;%PATH%"
+    echo Added Python to PATH. Please restart your command prompt.
+    pause
+    exit /b
+) else (
+    echo Python found in PATH.
+)
+
+REM Set up the virtual environment
+if not exist vJAM (
+    python -m venv vJAM
+)
 call vJAM\Scripts\activate
 
 REM Install dependencies
-
 echo Installing dependencies...
 python.exe -m pip install --upgrade setuptools
 python.exe -m pip install --upgrade pip

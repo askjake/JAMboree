@@ -15,6 +15,11 @@
     </div>
 
     <div class="lists">
+        <div id="filename-group-container" class="filename-group">
+             <h2>Filename Groups</h2>
+             <select id="filename-group-list" multiple></select>
+        </div>
+		
         <div id="app-list-container" class="app-list">
             <h2>Available Apps</h2>
             <select id="app-list" multiple></select>
@@ -33,10 +38,274 @@
 
     <div id="output"></div>
 
-    <!-- Click sound -->
-    <audio id="click-sound" src="{{ url_for('static', filename='click.mp3') }}"></audio>
-
     <!-- JavaScript -->
-    <script src="{{ url_for('static', filename='apps.js') }}"></script>
+    <script>
+	
+document.addEventListener("DOMContentLoaded", function () {
+    fetch('/hostname')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('host-name').textContent = data.hostname;
+        })
+        .catch(error => console.error('Error fetching hostname:', error));
+
+    fetchAppsList();  // Initial fetch when the page loads
+});
+
+function fetchAppsList() {
+    fetch('/api/apps')
+        .then(response => response.json())
+        .then(data => {
+            populateFilenameGroups(data);
+            fetchStbAppList();  // Fetch the STB App List after populating the filename groups
+        })
+        .catch(error => {
+            console.error('Error fetching apps:', error);
+            printToOutput(`Error fetching apps: ${error}`);
+        });
+}
+
+function populateFilenameGroups(apps) {
+    const filenameGroupListDiv = document.getElementById('filename-group-list');
+    filenameGroupListDiv.innerHTML = '';  // Clear the current options if any
+
+    // Extract unique groups, handling special cases like AN* and stripping other parts
+    const filenameGroups = new Set();
+    apps.forEach(app => {
+        let group;
+        if (app.filename.startsWith('AN')) {
+            group = 'AN';  // Group all AN* together
+        } else {
+            group = app.filename.replace(/_\d+.*_signed\.tgz$/, '');  // Regex to strip numbers, other parts, and '_signed.tgz'
+        }
+        filenameGroups.add(group);
+    });
+
+    // Convert set to array and sort alphabetically
+    const sortedFilenameGroups = Array.from(filenameGroups).sort();
+
+    sortedFilenameGroups.forEach(group => {
+        const opt = document.createElement('option');
+        opt.value = group;
+        opt.text = group;
+        filenameGroupListDiv.appendChild(opt);
+    });
+
+    // Add event listener to handle selection changes
+    filenameGroupListDiv.addEventListener('change', function () {
+        const selectedGroup = this.value;
+        populateAppList(apps, selectedGroup);
+    });
+}
+
+function populateAppList(apps, selectedGroup) {
+    const appListDiv = document.getElementById('app-list');
+    appListDiv.innerHTML = '';  // Clear the current options if any
+
+    // Filter the apps based on the selected group
+    const filteredApps = apps.filter(app => {
+        if (selectedGroup === 'AN') {
+            return app.filename.startsWith('AN');
+        } else {
+            return app.filename.startsWith(selectedGroup);
+        }
+    });
+
+    filteredApps.forEach(app => {
+        const opt = document.createElement('option');
+        opt.value = app.filename;
+        opt.text = `${app.date} - ${app.filename}`;
+        appListDiv.appendChild(opt);
+    });
+
+    printToOutput("App list populated.");
+}
+
+function fetchStbAppList() {
+    fetch('/get-stb-list')
+        .then(response => response.json())
+        .then(data => {
+            populateStbAppList(data.stbs);
+        })
+        .catch(error => {
+            console.error('Error fetching STBs:', error);
+            printToOutput(`Error fetching STBs: ${error}`);
+        });
+}
+
+function populateStbAppList(stbs) {
+    const stbListDiv = document.getElementById('stb-list');
+    stbListDiv.innerHTML = ''; // Clear previous content
+
+    // Iterate over the STBs and append options
+    Object.entries(stbs).forEach(([stbName, stbDetails]) => {
+        const opt = document.createElement('option');
+        opt.value = stbName;
+        opt.text = stbName;
+        stbListDiv.appendChild(opt);
+    });
+}
+
+function loadApps() {
+    const selectedApp = document.querySelector('#app-list option:checked');
+    const stbListElement = document.querySelector('#stb-list'); 
+
+    if (!selectedApp) {
+        console.error('Please select an app.');
+        printToOutput('Please select an app.');
+        return;
+    }
+
+    if (!stbListElement) {
+        console.error('STB list element not found.');
+        printToOutput('STB list element not found.');
+        return;
+    }
+
+    const selectedStbs = Array.from(stbListElement.selectedOptions).map(opt => opt.value);
+
+    if (selectedStbs.length === 0) {
+        console.error('Please select one or more STBs.');
+        printToOutput('Please select one or more STBs.');
+        return;
+    }
+
+    const appFilename = selectedApp.value;
+
+    selectedStbs.forEach(stb => {
+        const data = {
+            app: appFilename,
+            stb: stb,
+        };
+
+        fetch('/api/load_app', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+        })
+            .then(response => response.json())
+            .then(result => {
+                if (result.status) {
+                    printToOutput(`App ${appFilename} successfully loaded onto STB ${stb}.`);
+                } else {
+                    printToOutput(`Failed to load app: ${result.error}`);
+                }
+            })
+            .catch(error => {
+                printToOutput(`Error loading app: ${error}`);
+            });
+    });
+}
+
+function printToOutput(message) {
+    const outputDiv = document.getElementById('output');
+    const newMessage = document.createElement('p');
+    newMessage.textContent = message;
+    outputDiv.appendChild(newMessage);
+}
+
+// Fetch STB list and populate a multi-selection list
+function fetchStbList() {
+    fetch('/get-stb-list')
+        .then(response => response.json())
+        .then(data => {
+            populateStbList(data.stbs);
+        })
+        .catch(error => {
+            console.error('Error fetching STBs:', error);
+            printToOutput(`Error fetching STBs: ${error}`);
+        });
+}
+
+// Fetch STB list and populate a multi-selection list
+function fetchStbAppList() {
+    fetch('/get-stb-list')
+        .then(response => response.json())
+        .then(data => {
+            populateStbAppList(data.stbs);
+        })
+        .catch(error => {
+            console.error('Error fetching STBs:', error);
+            printToOutput(`Error fetching STBs: ${error}`);
+        });
+}
+ 
+function populateStbAppList(stbs) {
+    const stbListDiv = document.getElementById('stb-list');
+    stbListDiv.innerHTML = ''; // Clear previous content
+
+    // Iterate over the STBs and append options
+    Object.entries(stbs).forEach(([stbName, stbDetails]) => {
+        const opt = document.createElement('option');
+        opt.value = stbName;
+        opt.text = stbName;
+        stbListDiv.appendChild(opt);
+
+        // Debugging log
+        console.log(`Appending STB option: ${stbName}`);
+        //printToOutput(`Appending STB option: ${stbName}`);
+    });
+
+    console.log(stbListDiv.innerHTML); // Log the final HTML of the select element
+}
+
+function populateStbList(stbs) {
+    console.log("Populating STB List with data:", stbs);  // Log the input data
+    printToOutput("Populating STB List with data...");  // Print to output div
+    const stbListDiv = document.getElementById('stb-list');
+    if (!stbListDiv) {
+        console.error("Error: 'stb-list' element not found.");
+        //printToOutput("Error: 'stb-list' element not found.");
+        return;
+    }
+
+    stbListDiv.innerHTML = ''; // Clear previous content
+    stbListDiv.classList.add('grid-container'); // Add grid container class for styling
+
+    const listBox = document.createElement('select');
+    listBox.id = 'stbList';
+    listBox.multiple = true;
+    listBox.style.width = '100%';
+
+    const numberOfStbs = Object.keys(stbs).length;
+    const itemHeight = 20;
+    const maxHeight = window.innerHeight * 0.8;
+
+    const listBoxHeight = Math.min(numberOfStbs * itemHeight, maxHeight);
+    listBox.style.height = `${listBoxHeight}px`;
+
+    Object.entries(stbs).forEach(([stbName, stbDetails]) => {
+        const opt = document.createElement('option');
+        opt.value = stbName;
+        opt.text = `${stbName}`;
+        opt.setAttribute('data-remote', stbDetails.remote);
+        listBox.appendChild(opt);
+        console.log(`Appending STB option: ${opt.text}`);  // Log each appended option
+        //printToOutput(`Appending STB option: ${opt.text}`);
+    });
+
+    stbListDiv.appendChild(listBox);
+
+    const selectedStbs = getCookie('selectedStbs');
+    if (selectedStbs) {
+        const selectedValues = selectedStbs.split(',');
+        for (const option of listBox.options) {
+            if (selectedValues.includes(option.value)) {
+                option.selected = true;
+            }
+        }
+    }
+
+    listBox.onchange = function() {
+        const selectedOptions = Array.from(this.selectedOptions).map(option => option.value);
+        setCookie('selectedStbs', selectedOptions.join(','), 365);
+    };
+
+    listBox.scrollTop = 0;
+}
+
+	</script>
 </body>
 </html>

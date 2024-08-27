@@ -298,7 +298,7 @@ class SetTopJAM(tk.Frame):  # Ensure it's a Frame subclass
             apps_list = []
             
             for file in sorted_files:
-                if file.filename.startswith('AN'):
+                if file.filename.endswith('tgz'):
                     file_date = datetime.fromtimestamp(file.st_mtime).strftime('%Y-%m-%d')
                     file_entry = {"filename": file.filename, "date": file_date}
                     apps_list.append(file_entry)

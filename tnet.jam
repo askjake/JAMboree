@@ -1,0 +1,122 @@
+#!/usr/bin/expect
+
+################################################################################
+# Expect script to telnet to a given 
+# ip address and kill a given process.
+# 
+# Original Author : Vijay.Jayaraman
+# Version         : 1.10 Aram Semerjyan
+# Last Updated    : 06-17-2018
+# Usage           : tnet <STB_IP_ADDRESS> <NFS_MOUNT_POINT> "[Kill Command]"
+# Example         : tnet 192.168.1.202 delta "killall -9 stb_run"
+#
+# 1.10 - mount NAND for Wally to copy out of flash executables, like netflix
+# 1.9 - Use soft,nolock,tcp for mount option
+# 1.8 - Use nfs mount point as passing argument
+#       
+# 1.7 - Use $env(USER) to point to the user's home dir instead of hard-coding it.
+#       Also mount /home on STB to NFS mount home/cc_bld - it is very risky to 
+#       mount the NFS mount point's hoe dir since that can unknowingly/
+#       maliciously be rm -rf by the STB user/developer.
+# 1.6 - Minor change. Going back to ip_address from host_ip_addr since this may 
+#       cause confusion when copy-pasting the custom vars from an old script.
+# 1.5 - Adding rsize, wsize to the mount cmd since older PCs have issues w/o it.
+#       Added some comments and moved a few things around.
+# 1.4 - Pulling out user customizable variables to top for easy modification.
+# 1.3 - Unmounting /var/mnt/drivers as well to be safe.
+# 1.2 - Unmounting /usr/local before mounting it again.
+# 1.1 - Fixed bug with export command.
+#
+set tnet_version "1.20"
+
+################################################################################
+
+################################################################################
+# User customizable variables - Please customize this for your setup.
+################################################################################
+# Note: The following is your host/pc ip address.
+
+
+set nfs_top_dir      "/home/$env(USER)/stbmnt/"
+################################################################################
+
+puts "tnet script version: $tnet_version"
+
+if {$argc > 4 || $argc < 2} {
+ puts "Usage: tnet <ip address> <mount_point> \[kill command\]" [mount NAND:0-no,1-yes]
+ puts "Ex: tnet 192.168.1.104  ZIP1018"
+ puts "Ex: tnet 192.168.1.104  Wally \"kill -USR2 1\""
+ puts "Ex: tnet 192.168.1.104  Wally \"kill -USR2 1\" 1" 
+ exit
+}
+
+log_user 0
+set timeout 2
+
+set ip [lindex $argv 0]
+set stb_dir [lindex $argv 1]
+set cmd [lindex $argv 4]
+set web_app [lindex $argv 2]
+set mount_NAND [lindex $argv 3]
+set prompt "~ #"
+
+
+set ip_route_output [exec ip route get $ip]
+set ip_address [regexp -inline {src (\S+)} $ip_route_output]
+
+if {[llength $ip_address] == 0} {
+    puts "Could not determine the IP address related to the provided STB IP address."
+    exit 1
+} else {
+    set ip_address [lindex $ip_address 1]
+}
+
+puts "Using IP address $ip_address for the NFS mount."
+
+set mount_opts   "-o soft,nolock,tcp,rsize=1024,wsize=1024 "
+
+set unmount_cmd  "umount -l /usr/local /var/mnt/drivers \r"
+set mount_cmd    "mount $mount_opts $ip_address:$nfs_top_dir$stb_dir /mnt/mine \r"
+set export_cmd   "export LD_LIBRARY_PATH=/usr/local/lib:\$LD_LIBRARY_PATH\r cd /mnt/mine/ \r ls -l \r"
+
+for {set x 0} {$x<120} {incr x} {
+ # Open a telnet session to a remote server, and wait for a username prompt.
+ spawn telnet $ip
+
+ # Expect a timeout and then retry again.
+ expect {
+         timeout    {puts "Try Again..."; continue;}
+ 	 "login:"   {send "root\r";  send $cmd\r; break}
+ }
+}
+
+expect $prompt
+send $unmount_cmd
+
+expect $prompt
+send $mount_cmd
+
+expect $prompt
+send $export_cmd
+
+
+
+
+# Execute untar command if web_app is provided
+if {[string length $web_app] > 0} {
+    set untar_cmd "tar -xvzf $web_app -C /mnt/MISC_HD\r"
+    expect $prompt
+    send $untar_cmd
+    expect $prompt
+    send "exit \n"
+}
+ 
+# Try to mount NAND on Wally
+if { $mount_NAND == 1} {expect $prompt;
+	send "mount -t squashfs /dev/mtdblock3 /mnt/drivers\r"; expect $prompt;
+	send "insmod /lib/modules/sdhci-brcmstb.ko\r"; expect $prompt;
+	send "mount -t ext4 /dev/mmcblk0p1 /var/mnt/NAND\r";
+}
+
+
+interact

@@ -10,6 +10,7 @@ import sys
 script_dir = os.path.abspath('scripts/')
 sys.path.append(script_dir)
 config_file = 'base.txt'
+backup_config_file = 'base_back.txt'
 
 def ping_ip(ip):
     param = '-n' if sys.platform.lower() == 'win32' else '-c'
@@ -59,6 +60,23 @@ def get_subnets_from_arp():
     except subprocess.CalledProcessError:
         print("Failed to get subnets from ARP table on", system)
 
+    # Load additional subnets from the config file
+    if os.path.exists(config_file):
+        with open(config_file, 'r') as file:
+            try:
+                config_data = json.load(file)
+                for stb_name, stb_details in config_data.get("stbs", {}).items():
+                    ip = stb_details.get("ip", "")
+                    if ip:
+                        try:
+                            ip_obj = ipaddress.ip_address(ip)
+                            network = ipaddress.ip_network(f'{ip}/24', strict=False)
+                            subnets.add(network)
+                        except ValueError:
+                            continue
+            except json.JSONDecodeError:
+                print(f"Failed to parse JSON from config file: {config_file}")
+
     return subnets
 
 def discover_ips(subnets):
@@ -92,13 +110,20 @@ def do_ips(ip):
                         json_obj = json.loads(json_str)
                         json_objects.append(json_obj)
                     except json.JSONDecodeError as e:
-                        print(f"Failed to parse JSON from response line for IP {ip}: {str(e)}")
+                        #print(f"Failed to parse JSON from response line for IP {ip}: {str(e)}")
                         continue
 
-
+            # Check if any JSON objects were found
+            if not json_objects:
+                #print(f"No JSON response found in output for IP {ip}.")
+                return f"No JSON response found in output for IP {ip}.\n"
 
             # Assuming we're interested in the first valid JSON object found
-            stb_info = json_objects[0]['data']
+            stb_info = json_objects[0].get('data', {})
+
+            if not stb_info:
+                #print(f"No 'data' key found in JSON response for IP {ip}: {json_objects[0]}")
+                return f"No 'data' key found in JSON response for IP {ip}: {json_objects[0]}\n"
 
             try:
                 with open(config_file, 'r') as file:
@@ -138,6 +163,7 @@ def do_ips(ip):
                     new_name = f"{stb_info['model']}-{len(config_data['stbs']) + 1}"
                     config_data["stbs"][new_name] = {
                         'stb': rxid,
+                        'smartcard_id': stb_info.get('smartcard_id', ''),
                         'ip': ip,
                         'model': stb_info.get('model', ''),
                         'sw_ver': stb_info.get('sw_ver', ''),
@@ -147,8 +173,8 @@ def do_ips(ip):
                         'nbiot_swid': stb_info.get('nbiot_swid', ''),
                         'protocol': 'SGS',
                         'remote': '0',
-                        "lname": "",
-                        "passwd": "",
+                        "lname": "v0001_client_9830a9879da74b50707792e71dca446da28c3bda",
+                        "passwd": "35d1ea1fa281ed26a646f4f6b573b90cf1a0d18e",
                         "linux_pc": "",
                         "com_port": "",
                         "master_stb": "",
@@ -163,12 +189,13 @@ def do_ips(ip):
             print(f"Failed to get STB information for IP {ip}: {str(e)}")
             return f"Failed to get STB information for IP {ip}: {str(e)}\n"
     else:
-        print(f"IP {ip} is not reachable.")
+        #print(f"IP {ip} is not reachable.")
         return f"IP {ip} is not reachable.\n"
         
 if __name__ == '__main__':
     os.chdir(script_dir)
     config_file = 'base.txt'
+    backup_config_file = 'base_back.txt'
     subnets = get_subnets_from_arp()
     ips = discover_ips(subnets)
     for ip in ips:

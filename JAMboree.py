@@ -41,6 +41,7 @@ sys.path.append(script_dir)
 
 config_file = 'base.txt'
 credentials_file = 'credentials.json'
+apps_list_file = 'apps_list.json'
 
 class JAMboree_gui(tk.Tk):
     def __init__(self, *args, **kwargs):
@@ -71,7 +72,7 @@ class JAMboree_gui(tk.Tk):
         self.entry_bg = "#555555"  # Lighter grey for entries
         self.btn_fg = "#ffffff"  # White text for buttons
         logging.debug('Theme colors set.')
-        
+       
         # Load and resize the background image
         self.bg_image = Image.open("time-warp.jpg").resize((self.width, self.height), Image.Resampling.LANCZOS)
         self.bg_photo = ImageTk.PhotoImage(self.bg_image)
@@ -114,11 +115,22 @@ class JAMboree_gui(tk.Tk):
         self.current_sequence = []
         self.unpair_btn = None  # This will hold the button widget once created
         self.load_credentials()  # Load credentials on startup
+        
         logging.debug('Initial setup complete.')
+
+        self.pin_entry = ttk.Entry(self.frame, style='TEntry', width=8)
+        self.pin_entry.grid(row=19, column=1, columnspan=1, sticky='ew')
+        
+        self.sgs_pairing_instance = self.SGSPairing(self.output_text, self.pin_entry)
 
         self.setup_ui()
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         logging.debug('UI setup complete.')
+        
+         
+
+        
+
 
     def __del__(self):
         logging.debug('Destroying JAMboree GUI instance.')
@@ -266,16 +278,8 @@ class JAMboree_gui(tk.Tk):
         refresh_btn = ttk.Button(self.frame, text="Refresh", command=self.refresh, style='TButton')
         refresh_btn.grid(row=0, column=0, sticky='ew', padx=2, pady=2)
         
-        # Configure columns 5 to 10
-        #column_widths = {8: 15, 9: 10, 10: 5}
-        #for col, width in column_widths.items():
-            #self.frame.grid_columnconfigure(col, minsize=width)
-            #self.frame.grid_columnconfigure(col, weight=1)
-            #print(f"Configured column {col} with width {width}")
+        self.pin_submit_btn = ttk.Button(self.frame, text="PIN", command=self.sgs_pairing_instance.submit_pin)
 
-        self.pin_entry = ttk.Entry(self.frame, style='TEntry', width=8)
-        self.pin_entry.grid(row=19, column=1, columnspan=1, sticky='ew')
-        self.pin_submit_btn = ttk.Button(self.frame, text="PIN", command=self.submit_pin)
         self.pin_submit_btn.grid(row=19, column=2, sticky='ew', padx=2)
         
         self.buttons = {
@@ -358,7 +362,7 @@ class JAMboree_gui(tk.Tk):
         pair_btn = ttk.Button(self.frame, text="pair", command=lambda: self.process_button_press(None, 'pair'), style='TButton')
         pair_btn.grid(row=19, column=0, sticky='ew', padx=2, pady=2)
         
-        pair_btn = ttk.Button(self.frame, text="SGS Pair", command=lambda: self.sgs_pair(), style='TButton')
+        pair_btn = ttk.Button(self.frame, text="SGS Pair", command=lambda: self.SGSPairing.sgs_pair(), style='TButton')
         pair_btn.grid(row=20, column=0, sticky='ew', padx=2, pady=2)
         
 
@@ -1215,7 +1219,7 @@ class JAMboree_gui(tk.Tk):
                     rxid = stb_details.get('stb', '')[:11]
                     stb_ip = stb_details.get('ip', '')
                     logging.debug(f"Pairing STB: {stb_name} with RxID: {rxid} and IP: {stb_ip}")
-                    self.sgs_pair(stb_name, stb_ip, rxid)
+                    self.sgs_pairing_instance.sgs_pair(stb_name, stb_ip, rxid)
                     updated = True
                 if updated:
                     logging.info("Pairing configurations updated successfully.")
@@ -1257,8 +1261,8 @@ class JAMboree_gui(tk.Tk):
         try:
             stb_ip_address = ipaddress.ip_address(stb_ip)
             is_local = False
-            subnets = get_subnets_from_arp()
-            is_local = any(stb_ip_address in subnet for subnet in subnets)
+            #subnets = get_subnets_from_arp()
+            is_local = ping_ip(stb_ip)
             logging.debug(f"Is {stb_ip} local? {is_local}")
         except ValueError as ve:
             logging.error(f"Invalid IP address {stb_ip}: {str(ve)}")
@@ -1565,110 +1569,114 @@ class JAMboree_gui(tk.Tk):
         if not any_selected:
             self.output_text.insert(tk.END, "No STB selected!\n")
             self.output_text.see(tk.END)
-                   
-    def sgs_pair(self, stb_name, stb_ip, rxid):     
-        os.chdir(script_dir)    
-        try:
-            cmd = ["python", "sgs_pair.py", "-s", rxid, "-i", stb_ip, "-v"]
-            self.output_text.insert(tk.END, f"{cmd}\n")
-            self.output_text.see(tk.END)
-            try:
-                self.proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderrG=subprocess.PIPE, text=True, bufsize=1, universal_newlines=True)
-                full_output = ""
-                while True:
-                    output = self.proc.stdout.readline()
-                    if output.strip():
-                        self.output_text.insert(tk.END, f"Output: {output}")
-                        self.output_text.see(tk.END)
-                        full_output += output
-                    if "Please enter PIN:" in output:
-                        self.output_text.insert(tk.END, "PIN prompt detected. Waiting for user to enter PIN...\n")
-                        self.output_text.see(tk.END)
-                        break
-                    if self.proc.poll() is not None:
-                        break
-                    
-                cred_match = re.search(r"\((\S+):(\S+)\)", full_output)
-                if cred_match:
-                    login_val = cred_match.group(1)
-                    passwd_val = cred_match.group(2)
-                    self.update_config(rxid, login_val, passwd_val)
-                else:
-                    self.output_text.insert(tk.END, "Failed to capture login and password. Check the response.\n")
-                    self.output_text.see(tk.END)
-                
-            except Exception as e:
-                self.output_text.insert(tk.END, f"Failed to start pairing process: {str(e)}\n")
-                self.output_text.see(tk.END)  # Scroll to the bottom
-        except Exception as e:
-            self.output_text.insert(tk.END, f"Error with command setup: {str(e)}\n")
-            self.output_text.see(tk.END)  # Scroll to the bottom
-    
-    def handle_pin_prompt(self, cmd):
-        self.output_text.insert(tk.END, "PIN prompt detected. Waiting for user to enter PIN...\n")
-        self.output_text.see(tk.END)
-        self.proc = subprocess.Popen(cmd, shell=True, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1, universal_newlines=True)       
-
-    def submit_pin(self):
-        pin = self.pin_entry.get()
-        
-        if self.proc :
-            try:
-                self.proc.stdin.write(pin + '\n')
-                self.proc.stdin.flush()
-                self.output_text.insert(tk.END, "PIN sent successfully.\n")
-                self.output_text.see(tk.END)
-
-                # Collect full response after sending the PIN
-                full_response = ""
-                while True:
-                    response = self.proc.stdout.readline()
-                    if response == '' and self.proc.poll() is not None:
-                        break
-                    if response.strip():
-                        full_response += response
-                        self.output_text.insert(tk.END, response)
-                        self.output_text.see(tk.END)
-
-                # Extract credentials from the response
-                login_match = re.search(r"login:\s+(\S+)", full_response)
-                passwd_match = re.search(r"passwd:\s+(\S+)", full_response)
-                if login_match and passwd_match:
-                    login_val = login_match.group(1)
-                    passwd_val = passwd_match.group(1)
-                    self.update_config(self.entries[0].get(), login_val, passwd_val)
-                else:
-                    self.output_text.insert(tk.END, "Failed to capture login and password. Check the output above.\n")
-                    self.output_text.see(tk.END)
-            except Exception as e:
-                self.output_text.insert(tk.END, f"Failed to send {pin}: {str(e)}\n")
-                self.output_text.see(tk.END)
             
-    def update_config(self, rxid, login, passwd):
-        os.chdir(script_dir)    
-        try:
-            with open(self.config_file, 'r') as file:
-                config_data = json.load(file)
+    class SGSPairing:
+        def __init__(self, output_text, pin_entry):
+            self.output_text = output_text
+            self.pin_entry = pin_entry
+            self.proc = None
 
-            # Update the specific STB's login and password
-            updated = False
-            for stb_name, stb_info in config_data["stbs"].items():
-                if stb_info.get('stb', '')[:11] == rxid:                    
-                    stb_info["lname"] = login
-                    stb_info["passwd"] = passwd
-                    stb_info["prod"] = "true"
-                    updated = True
-                    print(f"Credentials updated for {stb_name} with RxID {rxid}.")
-                    break
 
-            if not updated:
-                print(f"No STB with rxid {rxid} found. No updates made.")
+        def sgs_pair(self, stb_name, stb_ip, rxid):
+            os.chdir(script_dir)
 
-            with open(self.config_file, 'w') as file:
-                json.dump(config_data, file, indent=4)
-        except Exception as e:
-            print(f"Failed to update configuration for {stb_name}: {e}")
+            def run_pairing_process():
+                try:
+                    cmd = ["python", "sgs_pair.py", "-s", rxid, "-i", stb_ip, "-v"]
+                    self.output_text.insert(tk.END, f"{cmd}\n")
+                    self.output_text.see(tk.END)
+                    try:
+                        self.proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1, universal_newlines=True)
+                        full_output = ""
+                        while True:
+                            output = self.proc.stdout.readline()
+                            if output.strip():
+                                self.output_text.insert(tk.END, f"Output: {output}")
+                                self.output_text.see(tk.END)
+                                full_output += output
+    
+                            if "Please enter PIN:" in output:
+                                self.output_text.insert(tk.END, "PIN prompt detected. Waiting for user to enter PIN...\n")
+                                self.output_text.see(tk.END)
+                                self.pin_entry.config(state=tk.NORMAL)
+                                return  # Exit the loop, waiting for PIN entry
+    
+                            if self.proc.poll() is not None:
+                                break
+    
+                        self.process_full_output(full_output, rxid)
 
+                    except Exception as e:
+                        self.output_text.insert(tk.END, f"Failed to start pairing process: {str(e)}\n")
+                        self.output_text.see(tk.END)
+
+                except Exception as e:
+                    self.output_text.insert(tk.END, f"Error with command setup: {str(e)}\n")
+                    self.output_text.see(tk.END)
+
+            threading.Thread(target=run_pairing_process).start()
+
+        def submit_pin(self):
+            pin = self.pin_entry.get()
+            if self.proc:
+                try:
+                    self.proc.stdin.write(pin + '\n')
+                    self.proc.stdin.flush()
+                    self.output_text.insert(tk.END, "PIN sent successfully.\n")
+                    self.output_text.see(tk.END)
+
+                    full_output = ""
+                    while True:
+                        output = self.proc.stdout.readline()
+                        if output.strip():
+                            self.output_text.insert(tk.END, f"Output: {output}")
+                            self.output_text.see(tk.END)
+                            full_output += output
+
+                        if self.proc.poll() is not None:
+                            break
+
+                    self.process_full_output(full_output, self.entries[0].get())
+
+                except Exception as e:
+                    self.output_text.insert(tk.END, f"Failed to send PIN {pin}: {str(e)}\n")
+                    self.output_text.see(tk.END)
+
+        def process_full_output(self, full_output, rxid):
+            cred_match = re.search(r"\((\S+):(\S+)\)", full_output)
+            if cred_match:
+                login_val = cred_match.group(1)
+                passwd_val = cred_match.group(2)
+                self.update_config(rxid, login_val, passwd_val)
+            else:
+                self.output_text.insert(tk.END, "Failed to capture login and password. Check the response.\n")
+                self.output_text.see(tk.END)
+
+        def update_config(self, rxid, login, passwd):
+            os.chdir(script_dir)    
+            try:
+                with open(self.config_file, 'r') as file:
+                    config_data = json.load(file)
+
+                # Update the specific STB's login and password
+                updated = False
+                for stb_name, stb_info in config_data["stbs"].items():
+                    if stb_info.get('stb', '')[:11] == rxid:                    
+                        stb_info["lname"] = login
+                        stb_info["passwd"] = passwd
+                        stb_info["prod"] = "true"
+                        updated = True
+                        print(f"Credentials updated for {stb_name} with RxID {rxid}.")
+                        break
+
+                if not updated:
+                    print(f"No STB with rxid {rxid} found. No updates made.")
+    
+                with open(self.config_file, 'w') as file:
+                    json.dump(config_data, file, indent=4)
+            except Exception as e:
+                print(f"Failed to update configuration for {stb_name}: {e}")
+                
 @app.route('/remote')
 def home():
     return render_template('JAMboRemote.html')
@@ -1907,9 +1915,44 @@ def update_stb_config(stbName, selectedId, isSelected):
 def index():
     return render_template('dayJAM.html')
 
+@app.route('/cc_share_apps', methods=['GET', 'POST'], strict_slashes=False)
+def populate_file_list(self):
+    self.file_listbox.delete(0, tk.END)  # Clear the listbox before populating
+    apps_list_file = 'apps_list.json'
+    try:
+        linux_pc = self.get_linux_pc_from_config()
+        credentials = load_credentials()
+        username = credentials['username']
+        password = credentials['password']
+
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(linux_pc, username=username, password=password)
+        sftp = ssh.open_sftp()
+
+        file_list = sftp.listdir_attr(self.remote_path)
+        sorted_files = sorted(file_list, key=lambda x: x.st_mtime, reverse=True)
+            
+        apps_list = []
+            
+        for file in sorted_files:
+            if file.filename.endswith('tgz'):
+                file_date = datetime.fromtimestamp(file.st_mtime).strftime('%Y-%m-%d')
+                file_entry = {"filename": file.filename, "date": file_date}
+                apps_list.append(file_entry)
+                self.file_listbox.insert(tk.END, f"{file_date} - {file.filename}")
+                    
+        with open(apps_list_file, 'w') as json_file:
+            json.dump(apps_list, json_file, indent=4)
+
+        sftp.close()
+        ssh.close()
+        self.update_output(f"File list saved to {apps_list_file}.")
+    except Exception as e:
+        self.update_output(f"Failed to populate file list: {e}")
+
 @app.route('/api/apps', methods=['GET'])
 def get_apps_list():
-    apps_list_file = 'apps_list.json'
     try:
         with open(apps_list_file, 'r') as json_file:
             apps_list = json.load(json_file)
@@ -2005,13 +2048,47 @@ def load_app():
         sftp.close()
         ssh.close()
         logging.info(f"App {app_filename} loaded successfully onto {linux_pc}.")
-        run_commands_over_ssh(linux_pc, username, password, stb_ip, app_filename)
+        
+        # Determine whether to run commands locally or over SSH
+        if app.config['controller'].is_ip_local(stbs, stb_ip):
+            #run_commands_local(stb_ip, app_filename)
+            run_commands_over_ssh(linux_pc, username, password, stb_ip, app_filename)
+        else:
+            run_commands_over_ssh(linux_pc, username, password, stb_ip, app_filename)
 
-        return jsonify({'status': 'App loaded successfully on linux mount'})
+        return jsonify({'status': 'App successfully prepared'})
 
     except Exception as e:
         logging.error(f"Error during app load: {str(e)}")
         return jsonify({'error': str(e)}), 500
+        
+def run_commands_local(stb_ip, app):
+    logging.debug("Starting run_commands_local function.")
+    logging.debug(f"Parameters received - STB IP: {stb_ip}, App: {app}")
+
+    try:
+        tnet_local = 'tnet.jam'
+
+        logging.debug(f"Local tnet.jam path: {tnet_local}")
+
+        # Command to be executed locally
+        command = f"expect {tnet_local} {stb_ip} apps {app}"
+        logging.info(f"Running: {command}")
+
+        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, error = process.communicate()
+
+        if output:
+            logging.info(f"Output from tnet command:\n{output.decode()}")
+        if error:
+            logging.error(f"Error from tnet command:\n{error.decode()}")
+
+    except Exception as e:
+        logging.error(f"Failed to execute commands locally: {e}")
+    finally:
+        logging.info("Stopping any music playback.")
+        pygame.mixer.music.stop()
+
         
 def run_commands_over_ssh(linux_pc, username, password, stb_ip, app):
     logging.debug("Starting run_commands_over_ssh function.")

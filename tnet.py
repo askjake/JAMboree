@@ -1,101 +1,120 @@
-import telnetlib
-import socket
-import sys
 import os
+import sys
+import logging
+import telnetlib
+import paramiko
+from time import sleep
 
-tnet_version = "1.10"
-nfs_top_dir = '/'
+logging.basicConfig(level=logging.DEBUG)
+tnet_version = "1.20"
 
-def get_host_ip(stb_ip):
-    """Get the local IP address associated with a given remote IP address."""
-    try:
-        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        s.connect((stb_ip, 80))
-        ip_address = s.getsockname()[0]
-        s.close()
-        return ip_address
-    except Exception as e:
-        print(f"Failed to determine local IP address: {e}")
+# User customizable variables - Customize this for your setup
+nfs_top_dir = f""
+
+def run_telnet(ip, stb_dir, web_app=None, cmd=None, mount_nand=0):
+    logging.info(f"tnet script version: {tnet_version}")
+
+    if not ip or not stb_dir:
+        print("Usage: tnet <ip address> <mount_point> <web_app> [kill command] [mount NAND:0-no,1-yes]")
         sys.exit(1)
 
-def run_tnet(ip, stb_dir, kill_command=None, mount_nand=False):
-    try:
-        # Determine the host IP address for the interface used to reach the STB
-        ip_address = get_host_ip(ip)
-        print(f"Using host IP address: {ip_address}")
+    telnet = telnetlib.Telnet(ip)
+    mount_opts = "-o soft,nolock,tcp,rsize=1024,wsize=1024"
+    unmount_cmd = "umount -l /usr/local /var/mnt/drivers\n"
+    mount_cmd = f"mount {mount_opts} {ip}:{nfs_top_dir}{stb_dir} /mnt/mine\n"
+    export_cmd = "export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH\n cd /mnt/mine/ \n ls -l\n"
+    prompt = "~ #"
 
-        # Open a Telnet session
-        telnet = telnetlib.Telnet(ip)
+    # Telnet Login
+    for _ in range(120):
+        try:
+            telnet.read_until(b"login: ")
+            telnet.write(b"root\n")
+            if cmd:
+                telnet.write(cmd.encode('ascii') + b"\n")
+            break
+        except EOFError:
+            logging.warning("Connection timed out. Retrying...")
+            sleep(2)
+            continue
 
-        # Log in
-        output = telnet.read_until(b"login: ")
-        print(output.decode('ascii'))
-        telnet.write(b"root\n")
-        output = telnet.read_until(b"# ")
-        print(output.decode('ascii'))
+    # Execute the necessary commands
+    telnet.read_until(prompt.encode('ascii'))
+    telnet.write(unmount_cmd.encode('ascii'))
+    telnet.read_until(prompt.encode('ascii'))
+    telnet.write(mount_cmd.encode('ascii'))
+    telnet.read_until(prompt.encode('ascii'))
+    telnet.write(export_cmd.encode('ascii'))
 
-        # Optionally send the kill command
-        if kill_command:
-            telnet.write(kill_command.encode('ascii') + b"\n")
-            output = telnet.read_until(b"# ")
-            print(output.decode('ascii'))
+    # Execute untar command if web_app is provided
+    if web_app:
+        untar_cmd = f"tar -xvzf {web_app} -C /mnt/MISC_HD\n"
+        telnet.read_until(prompt.encode('ascii'))
+        telnet.write(untar_cmd.encode('ascii'))
 
-        # Unmount existing mounts
-        unmount_cmds = [
-            "umount -l /usr/local",
-            "umount -l /var/mnt/drivers"
-        ]
-        for unmount_cmd in unmount_cmds:
-            telnet.write(unmount_cmd.encode('ascii') + b"\n")
-            output = telnet.read_until(b"# ")
-            print(output.decode('ascii'))
+    # Try to mount NAND on Wally
+    if mount_nand == 1:
+        telnet.read_until(prompt.encode('ascii'))
+        telnet.write(b"mount -t squashfs /dev/mtdblock3 /mnt/drivers\n")
+        telnet.read_until(prompt.encode('ascii'))
+        telnet.write(b"insmod /lib/modules/sdhci-brcmstb.ko\n")
+        telnet.read_until(prompt.encode('ascii'))
+        telnet.write(b"mount -t ext4 /dev/mmcblk0p1 /var/mnt/NAND\n")
 
-        # Mount the NFS directory
-        mount_opts = "-o soft,nolock,tcp,rsize=1024,wsize=1024"
-        mount_cmd = f"mount {mount_opts} {ip_address}:{nfs_top_dir}{stb_dir} /mnt/mine"
-        telnet.write(mount_cmd.encode('ascii') + b"\n")
-        output = telnet.read_until(b"# ")
-        print(output.decode('ascii'))
+    telnet.write(b"exit\n")
+    telnet.close()
 
-        # Set environment and change directory
-        export_cmd = "export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH"
-        telnet.write(export_cmd.encode('ascii') + b"\n")
-        output = telnet.read_until(b"# ")
-        print(output.decode('ascii'))
-        
-        telnet.write(b"cd /mnt/mine/\n")
-        output = telnet.read_until(b"# ")
-        print(output.decode('ascii'))
+def run_ssh(ip, stb_dir, web_app=None, cmd=None, mount_nand=0):
+    logging.info(f"tnet script version: {tnet_version}")
 
-        # Optionally mount NAND on Wally
-        if mount_nand:
-            nand_cmds = [
-                "mount -t squashfs /dev/mtdblock3 /mnt/drivers",
-                "insmod /lib/modules/sdhci-brcmstb.ko",
-                "mount -t ext4 /dev/mmcblk0p1 /var/mnt/NAND"
-            ]
-            for nand_cmd in nand_cmds:
-                telnet.write(nand_cmd.encode('ascii') + b"\n")
-                output = telnet.read_until(b"# ")
-                print(output.decode('ascii'))
+    ssh = paramiko.SSHClient()
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    ssh.connect(ip, username='root', password='')
 
-        telnet.write(b"exit\n")
-        telnet.close()
+    mount_opts = "-o soft,nolock,tcp,rsize=1024,wsize=1024"
+    unmount_cmd = "umount -l /usr/local /var/mnt/drivers"
+    mount_cmd = f"mount {mount_opts} {ip}:{nfs_top_dir}{stb_dir} /mnt/mine"
+    export_cmd = "export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH && cd /mnt/mine/ && ls -l"
 
-    except Exception as e:
-        print(f"Failed to connect or execute commands on STB {ip}: {e}")
+    # Run commands via SSH
+    commands = [unmount_cmd, mount_cmd, export_cmd]
+    if web_app:
+        commands.append(f"tar -xvzf {web_app} -C /mnt/MISC_HD")
+    if mount_nand == 1:
+        commands.extend([
+            "mount -t squashfs /dev/mtdblock3 /mnt/drivers",
+            "insmod /lib/modules/sdhci-brcmstb.ko",
+            "mount -t ext4 /dev/mmcblk0p1 /var/mnt/NAND"
+        ])
 
-if __name__ == "__main__":
-    if len(sys.argv) < 3 or len(sys.argv) > 5:
-        print("Usage: tnet.py <STB_IP_ADDRESS> <NFS_MOUNT_POINT> [Kill Command] [Mount NAND: 0-no, 1-yes]")
-        print("Example: tnet.py 192.168.1.202 delta")
-        print("Example: tnet.py 192.168.1.202 Wally \"killall -9 stb_run\"")
-        print("Example: tnet.py 192.168.1.202 Wally \"killall -9 stb_run\" 1")
+    for command in commands:
+        stdin, stdout, stderr = ssh.exec_command(command)
+        output = stdout.read().decode()
+        error = stderr.read().decode()
+        if output:
+            logging.info(f"Output from command '{command}':\n{output}")
+        if error:
+            logging.error(f"Error from command '{command}':\n{error}")
+
+    ssh.close()
+
+def main():
+    if len(sys.argv) < 3 or len(sys.argv) > 6:
+        print("Usage: tnet <ip address> <mount_point> <web_app> [kill command] [mount NAND:0-no,1-yes]")
         sys.exit(1)
 
     ip = sys.argv[1]
     stb_dir = sys.argv[2]
-    kill_cmd = sys.argv[3] if len(sys.argv) > 3 else None
-    mount_nand = bool(int(sys.argv[4])) if len(sys.argv) > 4 else False
+    web_app = sys.argv[3] if len(sys.argv) > 3 else None
+    cmd = sys.argv[4] if len(sys.argv) > 4 else None
+    mount_nand = int(sys.argv[5]) if len(sys.argv) > 5 else 0
 
-    run_tnet(ip, stb_dir, kill_cmd, mount_nand)
+    try:
+        run_telnet(ip, stb_dir, web_app, cmd, mount_nand)
+    except Exception as e:
+        logging.error(f"Telnet failed: {e}")
+        logging.info("Attempting to run via SSH instead...")
+        run_ssh(ip, stb_dir, web_app, cmd, mount_nand)
+
+if __name__ == "__main__":
+    main()

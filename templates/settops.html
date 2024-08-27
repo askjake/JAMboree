@@ -142,31 +142,41 @@
             }
         }
 
-        function populateTable(data) {
-            const tableBody = document.getElementById('stb-table-body');
-            tableBody.innerHTML = '';
+function populateTable(data) {
+    const tableBody = document.getElementById('stb-table-body');
+    tableBody.innerHTML = '';
 
-            for (const [stbs, stbDetails] of Object.entries(data)) {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td contenteditable="true" data-field="stbs">${stbs}</td>
-                    <td contenteditable="true" data-field="stb">${stbDetails.stb}</td>
-                    <td contenteditable="true" data-field="ip">${stbDetails.ip}</td>
-                    <td contenteditable="true" data-field="protocol">${stbDetails.protocol}</td>
-                    <td contenteditable="true" data-field="remote">${stbDetails.remote}</td>
-                    <td contenteditable="true" data-field="model">${stbDetails.model}</td>
-                    <td contenteditable="true" data-field="com">${stbDetails.com_port}</td>
-                    <td contenteditable="true" data-field="sw_ver">${stbDetails.sw_ver}</td>
-                    <td contenteditable="true" data-field="apps">${stbDetails.apps}</td>
-                    <td>
-                        <button class="edit-btn" onclick="editRow(this)">Edit</button>
-                        <button class="delete-btn" onclick="deleteRow(this)">Delete</button>
-                    </td>
-                `;
-                tableBody.appendChild(row);
-            }
-        }
+    const stbSet = new Set();
 
+    for (const [stbs, stbDetails] of Object.entries(data)) {
+        const row = document.createElement('tr');
+        const isDuplicate = stbSet.has(stbDetails.stb);
+        const isDuplicateIp = stbSet.has(stbDetails.ip);
+
+        stbSet.add(stbDetails.stb);
+        stbSet.add(stbDetails.ip);
+
+        row.style.backgroundColor = isDuplicate ? 'yellow' : ''; // Highlight duplicate STB rows
+        row.style.backgroundColor = isDuplicateIp ? 'red' : ''; // Highlight duplicate ip rows
+
+        row.innerHTML = `
+            <td contenteditable="true" data-field="stbs">${stbs}</td>
+            <td contenteditable="true" data-field="stb">${stbDetails.stb}</td>
+            <td contenteditable="true" data-field="ip">${stbDetails.ip}</td>
+            <td contenteditable="true" data-field="protocol">${stbDetails.protocol}</td>
+            <td contenteditable="true" data-field="remote">${stbDetails.remote}</td>
+            <td contenteditable="true" data-field="model">${stbDetails.model}</td>
+            <td contenteditable="true" data-field="com">${stbDetails.com_port}</td>
+            <td contenteditable="true" data-field="sw_ver">${stbDetails.sw_ver}</td>
+            <td contenteditable="true" data-field="apps">${stbDetails.apps}</td>
+            <td>
+                <button class="edit-btn" onclick="editRow(this)">Edit</button>
+                <button class="delete-btn" onclick="deleteRow(this)">Delete</button>
+            </td>
+        `;
+        tableBody.appendChild(row);
+    }
+}
         function addRow() {
             const tableBody = document.getElementById('stb-table-body');
             const row = document.createElement('tr');
@@ -274,25 +284,83 @@
             rows.forEach(row => tbody.appendChild(row));
         }
 
-        function saveChanges() {
-            fetch('/base', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ stbs: stbData }),
-            })
-            .then(response => response.json())
-            .then(result => {
-                if (result.success) {
-                    alert("Changes saved successfully.");
-                    originalData = JSON.parse(JSON.stringify(stbData)); // Update original data
-                } else {
-                    alert("Error saving changes: " + result.error);
-                }
-            })
-            .catch(error => console.error('Error saving changes:', error));
+function saveChanges() {
+    // Collect data from the table and check for duplicates
+    const rows = document.querySelectorAll('#stb-table-body tr');
+    const stbValues = new Set();
+    let hasDuplicates = false;
+
+    rows.forEach(row => {
+        const stbsField = row.querySelector('td[data-field="stbs"]');
+        const stbField = row.querySelector('td[data-field="stb"]');
+        const ipField = row.querySelector('td[data-field="ip"]');
+        const protocolField = row.querySelector('td[data-field="protocol"]');
+        const remoteField = row.querySelector('td[data-field="remote"]');
+        const modelField = row.querySelector('td[data-field="model"]');
+        const comField = row.querySelector('td[data-field="com"]');
+        const sw_verField = row.querySelector('td[data-field="sw_ver"]');
+        const appsField = row.querySelector('td[data-field="apps"]');
+
+        const stbs = stbsField.innerText.trim();
+        const stb = stbField.innerText.trim();
+        const ip = ipField.innerText.trim();
+        const protocol = protocolField.innerText.trim();
+        const remote = remoteField.innerText.trim();
+        const model = modelField.innerText.trim();
+        const com = comField.innerText.trim();
+        const sw_ver = sw_verField.innerText.trim();
+        const apps = appsField.innerText.trim();
+
+        // Check for duplicate STB values
+        if (stbValues.has(stb)) {
+            row.style.backgroundColor = 'yellow'; // Highlight duplicates
+            hasDuplicates = true;
+        } else {
+            stbValues.add(stb);
+            row.style.backgroundColor = ''; // Reset background color
         }
+
+        if (!stbs) return; // Skip if stbs field is empty
+
+        // Update stbData with new values, leaving other fields intact
+        if (!stbData[stbs]) {
+            stbData[stbs] = {};
+        }
+
+        stbData[stbs].stb = stb;
+        stbData[stbs].ip = ip;
+        stbData[stbs].protocol = protocol;
+        stbData[stbs].remote = remote;
+        stbData[stbs].model = model;
+        stbData[stbs].com_port = com;
+        stbData[stbs].sw_ver = sw_ver;
+        stbData[stbs].apps = apps;
+    });
+
+    if (hasDuplicates) {
+        alert("Warning: Duplicate STB values found. Please resolve duplicates before saving.");
+        return;
+    }
+
+    fetch('/base', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ stbs: stbData }),
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.success) {
+            alert("Changes saved successfully.");
+            originalData = JSON.parse(JSON.stringify(stbData)); // Update original data
+        } else {
+            alert("Error saving changes: " + result.error);
+        }
+    })
+    .catch(error => console.error('Error saving changes:', error));
+}
+
     </script>
 </body>
 </html>

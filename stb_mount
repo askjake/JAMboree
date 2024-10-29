@@ -1,0 +1,84 @@
+#!/usr/bin/expect
+
+################################################################################
+# Expect script to telnet to a given 
+# STB ip address and mount NFS
+# 
+# Original Author : Peter Kulakov
+# Version         : 1.0
+# Last Updated    : 03/07/2017
+# Usage           : stb_get <STB_IP_ADDRESS> <NFS_MOUNT_POINT>
+# Example         : stb_get 192.168.1.24 wally
+#
+# 1.0 - initial version
+#
+set stb_get "1.0"
+
+################################################################################
+
+################################################################################
+# User customizable variables - Please customize this for your setup.
+################################################################################
+# Note: The following is your host/pc ip address.
+set home_dir         "/home/$env(USER)"
+set ip_address       "192.168.1.1"
+set nfs_local_dir    "/export/target/"
+if {[file exist "$home_dir/stbmnt"]} {
+ set ip_address       "192.168.1.1"
+ set nfs_local_dir   "$home_dir/stbmnt"
+}
+if {[file exist "$home_dir/nfspoint"]} {
+ set ip_address       "192.168.1.1"
+ set nfs_local_dir   "$home_dir/nfspoint"
+}
+################################################################################
+
+#puts "stb_get script version: $stb_get"
+
+if {$argc > 2} {
+ puts "Usage: stb_get <ip address> <mount_point>"
+ puts "Ex: stb_get"
+ puts "Ex: stb_get 192.168.1.24 wally"
+ exit
+}
+
+log_user 0
+set timeout 2
+
+#set ip "192.168.1.24"
+#set ip "813-ternopol"
+set ip [exec get_default_stb.py -i]
+set stb ""
+
+if {$argc > 0} {
+set ip [lindex $argv 0]
+}
+if {$argc > 1} {
+set stb [lindex $argv 1]
+}
+
+puts "mount stb $ip"
+
+set prompt "~ #"
+
+set mount_opts   "-o soft,nolock,tcp,rsize=1024,wsize=1024 "
+
+set unmount_cmd  "umount /usr/local /var/mnt/drivers \r"
+set mount_cmd    "mount $mount_opts $ip_address:$nfs_local_dir$stb /mnt/mine \r"
+
+for {set x 0} {$x<120} {incr x} {
+ # Open a telnet session to a remote server, and wait for a username prompt.
+ spawn telnet $ip
+
+ # Expect a timeout and then retry again.
+ expect {
+         timeout    {log_user 1; puts "Try Again..."; log_user 0; continue;}
+ 	 "login:"   {send "root\r"; expect $prompt; send \r; break}
+ }
+}
+
+expect $prompt
+send $mount_cmd
+expect $prompt
+
+interact

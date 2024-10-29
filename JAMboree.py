@@ -6,20 +6,25 @@ import json
 from datetime import datetime, timedelta, timezone
 import subprocess
 import glob
+import queue
 import ftplib
+import requests
 import threading
 import shutil
 import ipaddress
 import paramiko
 import sched
+import psycopg2
 import time
 from threading import Thread
 import serial.tools.list_ports
 import serial
-from flask import Flask, request, jsonify, send_from_directory, render_template
+from flask import Flask, request, jsonify, send_from_directory, render_template, make_response
 from flask_cors import CORS
-from commands import get_button_codes, get_sgs_codes
+from commands import get_button_codes, get_sgs_codes, get_button_number
 import re
+import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
 from get_stb_list import *
 import socket
 from debug_gui import DebugGUI
@@ -32,25 +37,44 @@ from PIL import Image, ImageTk
 logging.basicConfig(filename='debugJam.log', level=logging.DEBUG)
 logging.debug('JAMboree script started.')
 
+paramiko_logger = logging.getLogger("paramiko")
+paramiko_logger.setLevel(logging.ERROR)  # Only show warnings and errors for Paramiko
+
+# Suppress DEBUG logs from urllib3
+urllib3_logger = logging.getLogger("urllib3")
+urllib3_logger.setLevel(logging.WARNING)  # You can also use ERROR if you want to suppress warnings too
+
 app = Flask(__name__, static_folder='static')
 CORS(app)  # Enable CORS for the entire Flask app
+
 
 # Append the directory containing sgs_lib to the system path
 script_dir = os.path.abspath('scripts/')  # Adjust this path as necessary
 sys.path.append(script_dir)
 
 config_file = 'base.txt'
-credentials_file = 'credentials.json'
-apps_list_file = 'apps_list.json'
+credentials_file = 'credentials.txt'
+apps_list_file = 'apps_list.txt'
+software_list_file = 'software.txt'
+press_count = 0  # Global counter to track button presses
+
+##### This class represents a graphical user interface (GUI) built using the Tkinter library for controlling STBs (Set-Top Boxes) and managing remote commands.
 
 class JAMboree_gui(tk.Tk):
+    
+
+    
     def __init__(self, *args, **kwargs):
+    #### Inputs: Optional arguments passed when initializing the Tkinter window.
+    #### Outputs: Initializes the GUI with default values, sets up widgets, and connects to required services.
+    #### Purpose: Initializes the window, GUI layout, SSH configurations, serial connections, and prepares the environment.
         logging.debug('Initializing JAMboree GUI.')
         super().__init__(*args, **kwargs)
         
         self.ssh_client = None  
         computer_name = socket.gethostname()  # Get the computer's hostname
         logging.debug(f'Computer hostname: {computer_name}')
+        
         
         self.title(f'{computer_name} - JAMboree')  # Set window title with computer name
         self.geometry('825x900')  # Adjust the size as needed        
@@ -123,6 +147,9 @@ class JAMboree_gui(tk.Tk):
         
         self.sgs_pairing_instance = self.SGSPairing(self.output_text, self.pin_entry)
 
+        self.command_queue = queue.Queue()
+        self.start_command_processor()
+
         self.setup_ui()
         self.protocol("WM_DELETE_WINDOW", self.on_close)
         logging.debug('UI setup complete.')
@@ -139,8 +166,13 @@ class JAMboree_gui(tk.Tk):
             self.ssh_client.close()  # Ensure the SSH connection is closed when the instance is deleted
             logging.debug('SSH connection closed.')
         super().__del__()
-
+        
+        
     def setup_ui(self):
+    #### Inputs: None.
+    #### Outputs: UI elements like buttons, labels, and comboboxes are added to the GUI.
+    #### Purpose: Constructs the interface elements for interacting with the STBs and other system components.
+        
         logging.debug('Setting up UI components.')
         self.configure(bg=self.bg_color)  # Set the background color of the root window
 
@@ -372,6 +404,10 @@ class JAMboree_gui(tk.Tk):
         logging.debug('UI components setup complete.')
 
     def apply_dark_theme(self, parent):
+    #### Inputs: parent - a Tkinter widget to which styles are applied.
+    #### Outputs: Modifies the color scheme of UI elements to follow a dark theme.
+    #### Purpose: Applies a dark theme to all widgets inside the parent widget.
+    
         for widget in parent.winfo_children():
             widget_type = widget.winfo_class()
             if widget_type in ["TButton", "TLabel", "TEntry", "TCombobox"]:
@@ -382,6 +418,10 @@ class JAMboree_gui(tk.Tk):
                 self.apply_dark_theme(widget)
 
     def load_credentials(self):
+    #### Inputs: None.
+    #### Outputs: Loads stored SSH credentials from a file into GUI fields.
+    #### Purpose: Load SSH credentials for Linux PC connections from a configuration file.
+    
         os.chdir(script_dir)
         try:
             with open(credentials_file, 'r') as file:
@@ -459,7 +499,11 @@ class JAMboree_gui(tk.Tk):
         self.send_reset_and_sat()
         self.scheduler.enter(600, 1, self.schedule_reset_and_sat)
         
-    def ensure_ssh_connection(self, linux_pc):
+    def ensure_ssh_connection(self, linux_pc):    
+    #### Inputs: linux_pc - The IP or hostname of the Linux PC to connect to.
+    #### Outputs: Establishes an SSH connection.
+    #### Purpose: Ensures an SSH connection is active with a remote Linux PC.
+    
         logging.debug(f"Ensuring SSH connection to {linux_pc}.")
         try:
             if self.ssh_client is None:
@@ -502,6 +546,15 @@ class JAMboree_gui(tk.Tk):
             self.output_text.see(tk.END)
 
     def get_dev_logs(self, linux_pc, stb_ip, hopper_rid, ssh_username, retry=False):
+    #### Inputs:
+    #### linux_pc: Hostname/IP of Linux PC.
+    #### stb_ip: IP address of the STB.
+    #### hopper_rid: Remote Identifier for the STB.
+    #### ssh_username: SSH username.
+    #### retry: Whether to retry fetching logs.
+    #### Outputs: Retrieves logs from an STB.
+    #### Purpose: Executes commands via SSH to gather logs from STBs and transfer them to local/remote servers.
+        
         date  = datetime.now().strftime('%Y-%m-%d')
         log_folder = f'{hopper_rid}/{date}'
         password = self.ssh_password_var.get()
@@ -537,8 +590,9 @@ class JAMboree_gui(tk.Tk):
                 # Create the necessary directory if it doesn't exist
                 commands = [
                     f'mkdir -p {linux_pc_dir}',
-                    f'./stbmnt/tnet {stb_ip}  {ftp_directory}',
-                    f'cp /var/mnt/MISC_HD/nal_0.cur nal_0.cur'
+                    f'expect stbmnt/tnet.jam {stb_ip}  {ftp_directory}',
+                    f'cp /var/mnt/MISC_HD/nal_0.cur nal_0.cur \r'
+                    f'cp /var/mnt/MISC_HD/esosal_log/stb_lightning/stb_lightning.0 stb_lightning.0 \r'
                 ]  
 
                 # Execute commands to create directory and run the initial command
@@ -1363,7 +1417,7 @@ class JAMboree_gui(tk.Tk):
             self.output_text.insert(tk.END, "Port closed: Trying to reconnect...\n")
             self.output_text.see(tk.END)
             self.open_serial_connection(com_port)
-            time.sleep(1)
+            time.sleep(0.1)
             if not self.serial_connection or not self.serial_connection.is_open:
                 logging.error(f"Failed to open serial port {com_port}.")
                 self.output_text.insert(tk.END, "Failed to open serial port. Please check the connection.\n")
@@ -1388,9 +1442,64 @@ class JAMboree_gui(tk.Tk):
                 return f"Failed to send RF command: {str(e)}", 500
 
         return response, 200
-			
+		
+    def start_command_processor(self):
+        threading.Thread(target=self.process_commands, daemon=True).start()
+
+    def process_commands(self):
+        while True:
+            stb_name, button_id, action = self.command_queue.get()
+            self._send_command(stb_name, button_id, action)
+            self.command_queue.task_done()
+
+    def dart(self, stb_name, button_id, action):
+        # Enqueue the command
+        self.command_queue.put((stb_name, button_id, action))
+        return jsonify({'status': 'Command queued'}), 200
+
+    def _send_command(self, stb_name, button_id, action):
+        with open(config_file, 'r') as file:
+            config_data = json.load(file)
+
+        stb_details = config_data['stbs'].get(stb_name)
+        if not stb_details:
+            logging.error(f"STB {stb_name} not found")
+            return
+
+        com_port = stb_details.get('com_port')
+        remote = stb_details.get('remote')
+
+        logging.debug(f"Sending RF remote command to COM port {com_port}, Remote {remote}, Button ID {button_id}, Action {action}")
+
+        button_number = get_button_number(button_id)
+        if not button_number:
+            logging.error(f"Button ID {button_id} not recognized.")
+            return
+
+        if not self.serial_connection or self.serial_connection.port != com_port:
+            logging.warning(f"Port {com_port} closed. Trying to reconnect.")
+            self.open_serial_connection(com_port)
+            time.sleep(0.1)
+            if not self.serial_connection or not self.serial_connection.is_open:
+                logging.error(f"Failed to open serial port {com_port}.")
+                return
+
+        if self.serial_connection and self.serial_connection.is_open:
+            try:
+                message = f"{remote} {button_number} {action}\n".encode('utf-8')
+                self.serial_connection.write(message)
+                self.serial_connection.flush()
+
+                response = self.serial_connection.read_all().decode('utf-8').strip()
+                logging.debug(f"RF command response: {response}")
+                return response
+
+            except serial.SerialException as e:
+                logging.error(f"Failed to send RF command: {str(e)}")
+                return f"Failed to send RF command: {str(e)}"
+        
     def check_channel(self):
-        channel_check_file = 'channel_check.json'
+        channel_check_file = 'channel_check.txt'
         os.chdir(script_dir)    
         any_selected = False 
         
@@ -1431,7 +1540,7 @@ class JAMboree_gui(tk.Tk):
                             
                             with open(channel_check_file, 'w') as file:
                                 json.dump(channel_data, file, indent=4)
-                                print("Channel data saved to 'channel_check.json'")
+                                print("Channel data saved to 'channel_check.txt'")
                             
                     
                 except subprocess.CalledProcessError as e:
@@ -1440,7 +1549,7 @@ class JAMboree_gui(tk.Tk):
                     print(f"An error occurred: {str(e)}")
 
     def check_multicast(self):
-        channel_check_file = 'multicast_check.json'
+        channel_check_file = 'multicast_check.txt'
         os.chdir(script_dir)
         any_selected = False
     
@@ -1509,7 +1618,7 @@ class JAMboree_gui(tk.Tk):
                     
                         with open(channel_check_file, 'w') as file:
                             json.dump(channel_data, file, indent=4)
-                            print("Multicast data saved to 'multicast_check.json'")
+                            print("Multicast data saved to 'multicast_check.txt'")
                     
                 except subprocess.CalledProcessError as e:
                     print(f"Command failed: {e.stderr}")
@@ -1569,16 +1678,18 @@ class JAMboree_gui(tk.Tk):
         if not any_selected:
             self.output_text.insert(tk.END, "No STB selected!\n")
             self.output_text.see(tk.END)
-            
+  
     class SGSPairing:
-        def __init__(self, output_text, pin_entry):
+        def __init__(self, output_text, pin_entry, stb_name=None):
             self.output_text = output_text
             self.pin_entry = pin_entry
+            self.stb_name = stb_name
             self.proc = None
-
+            self.entries = [pin_entry]  # Initialize entries with pin_entry or other relevant UI elements
 
         def sgs_pair(self, stb_name, stb_ip, rxid):
             os.chdir(script_dir)
+            self.stb_name = stb_name 
 
             def run_pairing_process():
                 try:
@@ -1595,7 +1706,7 @@ class JAMboree_gui(tk.Tk):
                                 self.output_text.see(tk.END)
                                 full_output += output
     
-                            if "Please enter PIN:" in output:
+                            if "Please enter PIN: " in output:
                                 self.output_text.insert(tk.END, "PIN prompt detected. Waiting for user to enter PIN...\n")
                                 self.output_text.see(tk.END)
                                 self.pin_entry.config(state=tk.NORMAL)
@@ -1603,7 +1714,8 @@ class JAMboree_gui(tk.Tk):
     
                             if self.proc.poll() is not None:
                                 break
-    
+
+                        # Check if the process ended and PIN was not needed
                         self.process_full_output(full_output, rxid)
 
                     except Exception as e:
@@ -1624,6 +1736,8 @@ class JAMboree_gui(tk.Tk):
                     self.proc.stdin.flush()
                     self.output_text.insert(tk.END, "PIN sent successfully.\n")
                     self.output_text.see(tk.END)
+                    
+                    time.sleep(2) 
 
                     full_output = ""
                     while True:
@@ -1632,10 +1746,11 @@ class JAMboree_gui(tk.Tk):
                             self.output_text.insert(tk.END, f"Output: {output}")
                             self.output_text.see(tk.END)
                             full_output += output
-
+    
                         if self.proc.poll() is not None:
                             break
 
+                    # Handle output after PIN is sent
                     self.process_full_output(full_output, self.entries[0].get())
 
                 except Exception as e:
@@ -1643,13 +1758,33 @@ class JAMboree_gui(tk.Tk):
                     self.output_text.see(tk.END)
 
         def process_full_output(self, full_output, rxid):
-            cred_match = re.search(r"\((\S+):(\S+)\)", full_output)
-            if cred_match:
-                login_val = cred_match.group(1)
-                passwd_val = cred_match.group(2)
-                self.update_config(rxid, login_val, passwd_val)
-            else:
-                self.output_text.insert(tk.END, "Failed to capture login and password. Check the response.\n")
+            # Debug print the full output for troubleshooting
+            self.output_text.insert(tk.END, f"Full Output after PIN submission: {full_output}\n")
+            self.output_text.see(tk.END)
+            try:
+                # Look for the JSON response in the full output
+                response_start = full_output.find("{")
+                response_end = full_output.rfind("}") + 1
+
+                if response_start != -1 and response_end != -1:
+                    json_response = full_output[response_start:response_end]
+                    data = json.loads(json_response)
+
+                    # Capture the name and password from the JSON data
+                    login_val = data.get("name")
+                    passwd_val = data.get("passwd")
+
+                    if login_val and passwd_val:
+                        self.update_config(rxid, login_val, passwd_val)
+                    else:
+                        self.output_text.insert(tk.END, "Failed to capture login and password. They might be missing in the response.\n")
+                        self.output_text.see(tk.END)
+                else:
+                    self.output_text.insert(tk.END, "Failed to find JSON response in the output.\n")
+                    self.output_text.see(tk.END)
+
+            except json.JSONDecodeError as e:
+                self.output_text.insert(tk.END, f"JSON decoding failed: {str(e)}\n")
                 self.output_text.see(tk.END)
 
         def update_config(self, rxid, login, passwd):
@@ -1671,12 +1806,12 @@ class JAMboree_gui(tk.Tk):
 
                 if not updated:
                     print(f"No STB with rxid {rxid} found. No updates made.")
-    
+
                 with open(self.config_file, 'w') as file:
                     json.dump(config_data, file, indent=4)
             except Exception as e:
                 print(f"Failed to update configuration for {stb_name}: {e}")
-                
+           
 @app.route('/remote')
 def home():
     return render_template('JAMboRemote.html')
@@ -1686,8 +1821,6 @@ def base_txt():
     os.chdir(script_dir)
     return send_from_directory('base.txt')
     
-
-
 @app.route('/settops', methods=['GET', 'POST'], strict_slashes=False)
 def settops():
     return render_template('settops.html')
@@ -1724,18 +1857,18 @@ def handle_55_remote(remote, button_id, delay):
     except Exception as e:
         return jsonify({'error': str(e), 'timestamp': datetime.now(timezone.utc).isoformat()}), 500
     
-@app.route('/rf/<remote>/<stb_name>/<button_id>/<delay>/', methods=['GET', 'POST'], strict_slashes=False)
-def handle_54_remote(remote, stb_name, button_id, delay):
+@app.route('/dart/<stb_name>/<button_id>/<action>/', methods=['GET', 'POST'], strict_slashes=False)
+def handle_dart(stb_name, button_id, action):
     # Call the instance method from the Flask app
-    response = app.config['controller'].rf_remote(com_port, remote, button_id, delay)
-    return jsonify({'response': response})
-
+    response = app.config['controller'].dart(stb_name, button_id, action)
+    return response
         
 @app.route('/auto/<remote>/<stb_name>/<button_id>/<delay>/', methods=['GET', 'POST'], strict_slashes=False)
 @app.route('/auto/<remote>/<stb_name>/<button_id>/<delay>', methods=['GET', 'POST'], strict_slashes=False)
 def handle_auto_remote(remote, stb_name, button_id, delay):
-    # Call the instance method from the Flask app
+    global press_count  # Use the global counter
     os.chdir(script_dir)
+
     try:
         delay = int(delay)  # Ensure delay is an integer
         with open(config_file, 'r') as file:  # Adjust the file path as necessary
@@ -1756,11 +1889,19 @@ def handle_auto_remote(remote, stb_name, button_id, delay):
             return jsonify({'error': 'Incomplete STB details'}), 400
             
         if protocol == 'RF':
+            press_count += 1  # Increment press count
             response = app.config['controller'].rf_remote(com_port, remote, button_id, delay)
+            time.sleep(delay)
+            response = app.config['controller'].rf_remote(com_port, remote, 'allup', delay)
+
+            # Call 'reset' every 10 presses
+            if press_count % 10 == 0:
+                response = app.config['controller'].rf_remote(com_port, remote, 'reset', delay)
+                logging.info(f"Reset command sent after {press_count} button presses.")
         
         elif protocol == 'SGS':
             response = app.config['controller'].sgs_remote(stb_name, stb_ip, rxid, button_id, delay)
-        
+
         return jsonify({'response': response, 'timestamp': datetime.now(timezone.utc).isoformat()})
 
     except FileNotFoundError:
@@ -1769,6 +1910,7 @@ def handle_auto_remote(remote, stb_name, button_id, delay):
         return jsonify({'error': 'Failed to decode the configuration file'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
 
 @app.route('/sgs/<remote>/<stb_name>/<button_id>/<delay>/', methods=['GET', 'POST'], strict_slashes=False)
 def handle_sgs_remote(remote, stb_name, button_id, delay):
@@ -1800,7 +1942,6 @@ def handle_sgs_remote(remote, stb_name, button_id, delay):
         return jsonify({'error': 'Failed to decode the configuration file'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
-
 
 @app.route('/triggered/<date>/<machine_name>/<stb_name>/<category_id>/<event_id>', methods=['GET', 'POST'], strict_slashes=False)
 def triggered(date, machine_name, stb_name, category_id, event_id):
@@ -1834,7 +1975,7 @@ def triggered(date, machine_name, stb_name, category_id, event_id):
         
         
         # Load linked logs
-        linked_logs_file = 'linkedlogs.json'  # Update with the correct path if needed
+        linked_logs_file = 'linkedlogs.txt'  # Update with the correct path if needed
         with open(linked_logs_file, 'r') as logs_file:
             linked_logs = json.load(logs_file)
 
@@ -1859,8 +2000,37 @@ def triggered(date, machine_name, stb_name, category_id, event_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+def retry_with_linux_pcs(offending_method, *args, **kwargs):
+    """
+    Retry the offending method with different 'linux_pc' values from the config file until success.
+    """
+    try:
+        # Load unique linux_pc values from config file
+        with open(config_file, 'r') as file:
+            config_data = json.load(file)
+            linux_pcs = list({stb_info['linux_pc'] for stb_info in config_data['stbs'].values()})
+            logging.debug(f"Found unique Linux PCs: {linux_pcs}")
 
-fetcher = JAMboree_gui()
+        # Try each linux_pc in the list until one succeeds
+        for linux_pc in linux_pcs:
+            logging.info(f"Attempting to rerun {offending_method.__name__} with Linux PC: {linux_pc}")
+            try:
+                # Update kwargs with the new linux_pc value
+                kwargs['linux_pc'] = linux_pc
+                # Retry the offending method with the current linux_pc
+                return offending_method(*args, **kwargs)
+            except Exception as retry_error:
+                logging.error(f"Failed with Linux PC {linux_pc}: {retry_error}")
+                continue
+
+        # If none of the Linux PCs work, raise an error
+        logging.error(f"All Linux PCs failed for {offending_method.__name__}.")
+        raise RuntimeError(f"All Linux PCs failed for {offending_method.__name__}")
+
+    except Exception as e:
+        logging.error(f"Error in retry_with_linux_pcs: {str(e)}")
+        raise
+
 
 
 @app.route('/54/<remote>/<button_id>', methods=['GET', 'POST'], strict_slashes=False)
@@ -1910,46 +2080,125 @@ def update_stb_config(stbName, selectedId, isSelected):
     # This is just a placeholder
     return True
 
-
 @app.route('/apps')
 def index():
     return render_template('dayJAM.html')
 
-@app.route('/cc_share_apps', methods=['GET', 'POST'], strict_slashes=False)
-def populate_file_list(self):
-    self.file_listbox.delete(0, tk.END)  # Clear the listbox before populating
-    apps_list_file = 'apps_list.json'
+@app.route('/cc_share_software', methods=['GET', 'POST'], strict_slashes=False)
+def get_ccshare_software_and_apps(linux_pc=None):
+    """Populates software.txt with files ending in .update and apps_list.txt with files ending in .tgz"""
+    
+    if linux_pc is None:
+        # Start by using the default Linux PC from credentials
+        credentials = load_credentials()
+        linux_pc = credentials['linux_pc']
+
+    software_list_file = os.path.join(os.getcwd(), 'software.txt')  # Path to software list file
+    apps_list_file = os.path.join(os.getcwd(), 'apps_list.txt')  # Path to apps list file
+    software_list = []
+    apps_list = []
+    remote_base_path = '/ccshare/linux/c_files/'  # Base path to search for software
+    remote_apps_path = '/ccshare/linux/c_files/signed-browser-applications/internal/'  # Base path to search for apps
+
     try:
-        linux_pc = self.get_linux_pc_from_config()
+        logging.debug("Starting get_ccshare_software_and_apps process.")
+
+        # Get credentials
         credentials = load_credentials()
         username = credentials['username']
         password = credentials['password']
 
+        logging.debug(f"Connecting to Linux PC at {linux_pc} with user {username}")
+
+        # Connect via SSH
         ssh = paramiko.SSHClient()
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(linux_pc, username=username, password=password)
+
+        # Open SFTP connection
         sftp = ssh.open_sftp()
+        logging.debug(f"Connected to SFTP on {linux_pc}")
 
-        file_list = sftp.listdir_attr(self.remote_path)
-        sorted_files = sorted(file_list, key=lambda x: x.st_mtime, reverse=True)
-            
-        apps_list = []
-            
-        for file in sorted_files:
-            if file.filename.endswith('tgz'):
-                file_date = datetime.fromtimestamp(file.st_mtime).strftime('%Y-%m-%d')
-                file_entry = {"filename": file.filename, "date": file_date}
-                apps_list.append(file_entry)
-                self.file_listbox.insert(tk.END, f"{file_date} - {file.filename}")
-                    
-        with open(apps_list_file, 'w') as json_file:
-            json.dump(apps_list, json_file, indent=4)
+        # Get Apps List (.tgz files)
+        logging.debug(f"Listing files in {remote_apps_path}")
+        try:
+            file_list = sftp.listdir_attr(remote_apps_path)
+            sorted_files = sorted(file_list, key=lambda x: x.st_mtime, reverse=True)
 
+            for file in sorted_files:
+                if file.filename.endswith('tgz'):
+                    file_date = datetime.fromtimestamp(file.st_mtime).strftime('%Y-%m-%d')
+                    file_entry = {"filename": file.filename, "date": file_date}
+                    apps_list.append(file_entry)
+                    logging.debug(f"Added app: {file_entry}")
+
+            # Write apps list to apps_list.txt
+            with open(apps_list_file, 'w') as json_file:
+                json.dump(apps_list, json_file, indent=4)
+            logging.info(f"Apps list saved to {apps_list_file}")
+        except FileNotFoundError as fnf_error:
+            logging.error(f"Directory {remote_apps_path} not found: {fnf_error}")
+
+        # Get Software List (.update files)
+        logging.debug(f"Listing directories in {remote_base_path}")
+        remote_dirs = [dir for dir in sftp.listdir(remote_base_path) if dir.endswith('Update')]
+        logging.debug(f"Found Update directories: {remote_dirs}")
+
+        # Get all directories in the 'builds_release' folder
+        builds_release_path = os.path.join(remote_base_path, 'builds_release')
+        logging.debug(f"Listing directories in {builds_release_path}")
+        
+        builds_release_dirs = sftp.listdir(builds_release_path)
+        logging.debug(f"Found builds_release directories: {builds_release_dirs}")
+
+        # Add the correct paths for builds_release directories
+        remote_dirs.extend([f'builds_release/{dir}' for dir in builds_release_dirs])
+        logging.debug(f"Total directories to process: {remote_dirs}")
+
+        # Iterate over each Update directory
+        for update_dir in remote_dirs:
+            update_path = os.path.join(remote_base_path, update_dir)
+            logging.debug(f"Listing files in {update_path}")
+            
+            try:
+                file_list = sftp.listdir_attr(update_path)
+            except FileNotFoundError as fnf_error:
+                logging.error(f"Directory {update_path} not found: {fnf_error}")
+                continue
+            
+            sorted_files = sorted(file_list, key=lambda x: x.st_mtime, reverse=True)
+
+            # Filter and add .update files
+            for file in sorted_files:
+                if file.filename.endswith('.update'):
+                    file_date = datetime.fromtimestamp(file.st_mtime).strftime('%Y-%m-%d')
+                    file_entry = {"update_dir": update_dir, "filename": file.filename, "date": file_date}
+                    software_list.append(file_entry)
+                    logging.debug(f"Added software: {file_entry}")
+
+        # Write software list to software.txt
+        logging.debug(f"Writing software list to {software_list_file}")
+        with open(software_list_file, 'w') as json_file:
+            json.dump(software_list, json_file, indent=4)
+        logging.info(f"Software list saved to {software_list_file}")
+
+        # Close connections
         sftp.close()
         ssh.close()
-        self.update_output(f"File list saved to {apps_list_file}.")
+
+        logging.debug("SFTP and SSH connections closed.")
+        logging.info(f"Software and apps lists updated successfully.")
+
+        return jsonify({"status": "Software and Apps lists updated successfully"}), 200
+
+    except (paramiko.SSHException, paramiko.ssh_exception.NoValidConnectionsError) as ssh_error:
+        logging.error(f"SSH Error: {ssh_error}")
+        # Use the retry method to attempt other Linux PCs
+        return retry_with_linux_pcs(get_ccshare_software_and_apps)
+
     except Exception as e:
-        self.update_output(f"Failed to populate file list: {e}")
+        logging.error(f"Error in get_ccshare_software_and_apps: {str(e)}")
+        return jsonify({"error": f"Failed to update software and apps lists: {str(e)}"}), 500
 
 @app.route('/api/apps', methods=['GET'])
 def get_apps_list():
@@ -1959,18 +2208,172 @@ def get_apps_list():
         return jsonify(apps_list)
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+        
 
+@app.route('/get-software-list', methods=['GET'])
+def populate_software_list():
+    """Returns the software list from the software.txt file."""
+    software_list_file = os.path.join(os.getcwd(), 'software.txt')
+    logging.debug(f"Reading software list from {software_list_file}")
+    
+    try:
+        with open(software_list_file, 'r') as file:
+            software_list = json.load(file)
+        return jsonify(software_list)
+    except Exception as e:
+        logging.error(f"Error reading software list: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+@app.route('/api/upload-local-software', methods=['POST'])
+def upload_local_software():
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file part'}), 400
+        
+        file = request.files['file']
+        selected_stb = request.form.get('stb')
+        file_type = request.form.get('file_type')
+
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+
+        # Save the file to local_apps directory
+        local_apps = os.path.join(apps_dir, file.filename)
+        file.save(local_apps)
+        
+        # Load credentials
+        credentials = load_credentials()		
+        linux_pc = credentials.get('linux_pc')
+        username = credentials.get('username')
+        password = credentials.get('password')
+        logging.debug(f"Loaded credentials for user: {username}")
+
+        # Establish SSH connection
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(linux_pc, username=username, password=password)
+        sftp = ssh.open_sftp()
+        logging.info(f"Connected to Linux PC: {linux_pc}")
+
+        linux_pc_dir = f'/home/{username}/stbmnt/apps'
+        linux_pc_app = os.path.join(linux_pc_dir, file.filename).replace("\\", "/")
+
+        # Ensure the Linux PC directory exists
+        try:
+            sftp.chdir(linux_pc_dir)
+        except IOError:
+            logging.info(f"Creating directory on Linux PC: {linux_pc_dir}")
+            ssh.exec_command(f"mkdir -p {linux_pc_dir}")
+
+        # Upload the software to the Linux PC if it does not already exist there
+        try:
+            sftp.stat(linux_pc_app)
+            logging.info(f"Software already exists on Linux PC: {linux_pc_app}")
+        except FileNotFoundError:
+            logging.info(f"Uploading {file.filename} to {linux_pc_app}.")
+            sftp.put(local_apps, linux_pc_app)
+
+        # Set appropriate permissions after upload
+        ssh.exec_command(f"chmod 755 {linux_pc_app}")
+
+        sftp.close()
+        ssh.close()
+        logging.info(f"Software {file.filename} loaded successfully onto {linux_pc}.")
+        
+        data = {
+            'stb': selected_stb,
+            'software': file.filename,
+            'file_type': file_type
+        }
+
+        # Call jam_software_internal() after saving the file
+        response, status_code = jam_software_internal(data)
+
+        return jsonify(response), status_code
+
+    except Exception as e:
+        logging.error(f"Error during {file_type} upload: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+def jam_software_internal(data):
+    try:
+        selected_file = data.get('software')
+        selected_stb = data.get('stb')
+        file_type = data.get('file_type')
+        
+        if not selected_file or not selected_stb:
+            return {'error': 'Software or STB not selected'}, 400
+
+        # Refactored logic to handle software JAMming after upload
+        local_apps = os.path.join(apps_dir, selected_file)
+        
+        with open(config_file, 'r') as file:
+            config_data = json.load(file)
+            stbs = config_data.get('stbs', {})
+            stb_info = stbs.get(selected_stb)
+            if not stb_info:
+                logging.error(f"STB {selected_stb} not found in configuration.")
+                return {'error': f"STB {selected_stb} not found in configuration"}, 404
+
+            stb_ip = stb_info.get('ip')
+            linux_pc = stb_info.get('linux_pc')
+            logging.debug(f"STB IP: {stb_ip}, Linux PC: {linux_pc}")
+
+            if not stb_ip:
+                logging.error(f"Failed to find IP for STB: {selected_stb}")
+                return {'error': f"Failed to find IP for STB: {selected_stb}"}, 404
+
+        logging.info(f"Preparing to JAM {file_type} {selected_file} onto STB {selected_stb}")
+
+        credentials = load_credentials()
+        username = credentials.get('username')
+        password = credentials.get('password')
+        logging.debug(f"Loaded credentials for user: {username}")
+
+        if file_type == "software":
+            run_commands_over_ssh(linux_pc, username, password, stb_ip, selected_file)
+        elif file_type == "app":
+            # Form the data and call load_app() with the correct form data
+            form_data = {
+                'stb': selected_stb,
+                'app': selected_file
+            }
+            load_app_internal(form_data)
+
+        return {'status': f"{file_type.capitalize()} successfully JAMmed"}, 200
+
+    except Exception as e:
+        logging.error(f"Error during {file_type} JAMming: {str(e)}")
+        return {'error': str(e)}, 500
+        
+def load_app_internal(data):
+    with app.test_request_context('/api/load_app', method='POST', data=data):
+        return load_app()
+        
 @app.route('/api/load_app', methods=['POST'])
-def load_app():
+@app.route('/api/load_app/<stb_name>/<app>', methods=['GET'])
+def load_app(stb_name=None, app=None):
     logging.debug("Received request to load app.")
-    data = request.json
-    selected_file = data.get('app')
-    selected_stb = data.get('stb')
+    
+    # Check if it's a GET request with URL parameters or POST request with JSON/form-data
+    if request.method == 'GET' and stb_name and app:
+        selected_stb = stb_name
+        selected_file = app
+    else:
+        if request.is_json:  # Handle JSON request (external API call)
+            data = request.json
+            selected_file = data.get('app')
+            selected_stb = data.get('stb')
+        else:  # Handle form-data (internal API call)
+            selected_file = request.form.get('app')
+            selected_stb = request.form.get('stb')
+
     logging.debug(f"Selected app: {selected_file}, Selected STB: {selected_stb}")
 
     if not selected_file or not selected_stb:
         logging.error("App or STB not selected.")
         return jsonify({'error': 'App or STB not selected'}), 400
+
+    local_apps = os.path.join(apps_dir, selected_file)
 
     try:
         # Load configuration
@@ -1994,6 +2397,7 @@ def load_app():
         credentials = load_credentials()
         username = credentials.get('username')
         password = credentials.get('password')
+        linux_pc = credentials.get('linux_pc')
         logging.debug(f"Loaded credentials for user: {username}")
 
         # Establish SSH connection
@@ -2012,10 +2416,10 @@ def load_app():
 
         cc_share = f"/ccshare/linux/c_files/signed-browser-applications/internal/{app_filename}"
         local_apps = os.path.join(apps_dir, app_filename)
-        linux_pc_dir = f'/home/{username}/stbmnt/apps/'
-        linux_pc_app = os.path.join(linux_pc_dir, app_filename)
+        linux_pc_dir = f'/home/{username}/stbmnt/apps'
+        linux_pc_app = os.path.join(linux_pc_dir, selected_file).replace("\\", "/")
 
-        logging.debug(f"App filename: {app_filename}, CC Share Path: {cc_share}, Local Apps Path: {local_apps}, Linux PC App Path: {linux_pc_app}")
+        logging.debug(f"App filename: {app_filename},\n CC Share Path: {cc_share},\n Local Apps Path: {local_apps},\n Linux PC App Path: {linux_pc_app}")
 
         # Ensure the local apps directory exists
         if not os.path.exists(apps_dir):
@@ -2049,47 +2453,121 @@ def load_app():
         ssh.close()
         logging.info(f"App {app_filename} loaded successfully onto {linux_pc}.")
         
-        # Determine whether to run commands locally or over SSH
-        if app.config['controller'].is_ip_local(stbs, stb_ip):
-            #run_commands_local(stb_ip, app_filename)
-            run_commands_over_ssh(linux_pc, username, password, stb_ip, app_filename)
-        else:
-            run_commands_over_ssh(linux_pc, username, password, stb_ip, app_filename)
+        run_commands_over_ssh(linux_pc, username, password, stb_ip, app_filename)
 
-        return jsonify({'status': 'App successfully prepared'})
+        return jsonify({'status': 'App successfully prepared'}), 200
 
     except Exception as e:
         logging.error(f"Error during app load: {str(e)}")
         return jsonify({'error': str(e)}), 500
-        
-def run_commands_local(stb_ip, app):
-    logging.debug("Starting run_commands_local function.")
-    logging.debug(f"Parameters received - STB IP: {stb_ip}, App: {app}")
+
+@app.route('/jam-software', methods=['GET', 'POST'], strict_slashes=False)
+def jam_software(stb_name=None, software=None):
+    logging.debug("Received request to load software.")
+    
+    # Check if it's a GET request with URL parameters or POST request with JSON
+    if stb_name and software:
+        selected_stb = stb_name
+        selected_file = software
+    else:
+        data = request.json
+        selected_dir = data.get('directory')  # The parent directory (update_dir)
+        selected_file = data.get('software')   # The software file (filename)
+        selected_stb = data.get('stb')
+
+    logging.debug(f"Selected software: {selected_file}, Selected Directory: {selected_dir}, Selected STB: {selected_stb}")
+
+    if not selected_file or not selected_stb or not selected_dir:
+        logging.error("Software, directory, or STB not selected.")
+        return jsonify({'error': 'Software, directory, or STB not selected'}), 400
 
     try:
-        tnet_local = 'tnet.jam'
+        # Load configuration
+        with open(config_file, 'r') as file:
+            config_data = json.load(file)
+            stbs = config_data.get('stbs', {})
+            stb_info = stbs.get(selected_stb)
+            if not stb_info:
+                logging.error(f"STB {selected_stb} not found in configuration.")
+                return jsonify({'error': f"STB {selected_stb} not found in configuration"}), 404
 
-        logging.debug(f"Local tnet.jam path: {tnet_local}")
+            stb_ip = stb_info.get('ip')
+            linux_pc = stb_info.get('linux_pc')
+            logging.debug(f"STB IP: {stb_ip}, Linux PC: {linux_pc}")
 
-        # Command to be executed locally
-        command = f"expect {tnet_local} {stb_ip} apps {app}"
-        logging.info(f"Running: {command}")
+            if not stb_ip:
+                logging.error(f"Failed to find IP for STB: {selected_stb}")
+                return jsonify({'error': f"Failed to find IP for STB: {selected_stb}"}), 404
 
-        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, error = process.communicate()
+        # Load credentials
+        credentials = load_credentials()
+        username = credentials.get('username')
+        password = credentials.get('password')
+        linux_pc = credentials.get('linux_pc')
+        logging.debug(f"Loaded credentials for user: {username}")
 
-        if output:
-            logging.info(f"Output from tnet command:\n{output.decode()}")
-        if error:
-            logging.error(f"Error from tnet command:\n{error.decode()}")
+        # Establish SSH connection
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(linux_pc, username=username, password=password)
+        sftp = ssh.open_sftp()
+        logging.info(f"Connected to Linux PC: {linux_pc}")
+
+        # Construct the CC Share path using the update_dir and the software filename
+        cc_share = f"/ccshare/linux/c_files/{selected_dir}/{selected_file}"
+        local_apps = os.path.join(apps_dir, selected_file)
+        linux_pc_dir = f'/home/{username}/stbmnt/apps'
+        linux_pc_app = os.path.join(linux_pc_dir, selected_file).replace("\\", "/")
+
+        logging.debug(f"Software filename: {selected_file}, CC Share Path: {cc_share}, Local Apps Path: {local_apps}, Linux PC App Path: {linux_pc_app}")
+
+        # Ensure the local apps directory exists
+        if not os.path.exists(apps_dir):
+            os.makedirs(apps_dir)
+            logging.info(f"Created local apps directory: {apps_dir}")
+
+        # Download the software if not already available locally
+        if not os.path.exists(local_apps):
+            logging.info(f"Downloading {selected_file} from CC Share.")
+            sftp.get(cc_share, local_apps)
+        else:
+            logging.info(f"{selected_file} already exists locally, skipping download.")
+
+        # Ensure the Linux PC directory exists
+        try:
+            sftp.chdir(linux_pc_dir)
+            logging.info(f"Changed to Linux PC directory: {linux_pc_dir}")
+            ssh.exec_command(f"ls -l")
+        except IOError:
+            logging.info(f"Creating directory on Linux PC: {linux_pc_dir}")
+            ssh.exec_command(f"mkdir -p {linux_pc_dir}")
+
+        # Upload the software to the Linux PC if it does not already exist there
+        try:
+            sftp.stat(linux_pc_app)
+            logging.info(f"Software already exists on Linux PC: {linux_pc_app}")
+            ssh.exec_command(f"chmod 755 {linux_pc_app}\r")
+            ssh.exec_command(f"ls -l {linux_pc_app}\r")
+            logging.info(f"chmod'ing {linux_pc_app}.")
+        except FileNotFoundError:
+            logging.info(f"Uploading {local_apps} to {linux_pc_app}.")
+            sftp.put(local_apps, linux_pc_app)
+            ssh.exec_command(f"chmod 755 {linux_pc_app}\r")
+            logging.info(f"chmod'ing {linux_pc_app}.")
+            ssh.exec_command(f"ls -l {linux_pc_app}\r")
+
+        sftp.close()
+        ssh.close()
+        logging.info(f"Software {selected_file} loaded successfully onto {linux_pc}.")
+        
+        run_commands_over_ssh(linux_pc, username, password, stb_ip, selected_file)
+
+        return jsonify({'status': 'Software successfully JAMmed'})
 
     except Exception as e:
-        logging.error(f"Failed to execute commands locally: {e}")
-    finally:
-        logging.info("Stopping any music playback.")
-        pygame.mixer.music.stop()
+        logging.error(f"Error during software load: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
-        
 def run_commands_over_ssh(linux_pc, username, password, stb_ip, app):
     logging.debug("Starting run_commands_over_ssh function.")
     logging.debug(f"Parameters received - Linux PC: {linux_pc}, Username: {username}, STB IP: {stb_ip}, App: {app}")
@@ -2100,6 +2578,12 @@ def run_commands_over_ssh(linux_pc, username, password, stb_ip, app):
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(linux_pc, username=username, password=password)
         logging.info(f"SSH connection established with {linux_pc}.")
+        
+        # Helper function to send output to the frontend
+        def send_to_frontend(message):
+            requests.post('http://localhost:5001/api/send_output', json={"message": message})
+
+        send_to_frontend("SSH connection established.")
 
         linux_pc_stbmnt = f'/home/{username}/stbmnt'
         tnet_remote_path = f"{linux_pc_stbmnt}/tnet.jam"
@@ -2113,9 +2597,11 @@ def run_commands_over_ssh(linux_pc, username, password, stb_ip, app):
         try:
             logging.info(f"Uploading tnet.jam to {linux_pc}:{tnet_remote_path}.")
             sftp.put(tnet_local, tnet_remote_path)
-            logging.debug(f"tnet.jam uploaded successfully to {tnet_remote_path}.")
+            send_to_frontend(f"tnet.jam uploaded successfully to {tnet_remote_path}.")
         except FileNotFoundError:
-            logging.error(f"tnet.jam not found locally or unable to upload to {tnet_remote_path}.")
+            error_msg = f"tnet.jam not found locally or unable to upload to {tnet_remote_path}."
+            logging.error(error_msg)
+            send_to_frontend(error_msg)
             raise
 
         sftp.close()
@@ -2126,34 +2612,631 @@ def run_commands_over_ssh(linux_pc, username, password, stb_ip, app):
 
         stdin, stdout, stderr = ssh.exec_command(command)
 
+        # Capture output from stdout and stderr
         output = stdout.read().decode()
         error = stderr.read().decode()
 
         if output:
             logging.info(f"Output from tnet command:\n{output}")
+            send_to_frontend(f"Output from tnet command:\n{output}")
+            
+            # Check if recovery is required
+            if "please put your box in boot recovery" in output.lower():
+                send_to_frontend("Boot recovery is required. Initiating boot recovery...")
+                boot_recovery(linux_pc, username, password, stb_ip)
+                send_to_frontend("Re-running commands after boot recovery...")
+                time.sleep(45)
+                run_commands_over_ssh(linux_pc, username, password, stb_ip, app)  # Re-run the command after recovery
+                return
+
         if error:
             logging.error(f"Error from tnet command:\n{error}")
+            send_to_frontend(f"Error from tnet command:\n{error}")
 
         ssh.close()
         logging.info("SSH connection closed.")
+        send_to_frontend("SSH connection closed successfully.")
 
     except Exception as e:
         logging.error(f"Failed to execute commands over SSH: {e}")
-    finally:
-        logging.info("Stopping any music playback.")
-        pygame.mixer.music.stop()
+        send_to_frontend(f"Failed to execute commands over SSH: {e}")
+def boot_recovery(linux_pc, username, password, stb_ip):
+    logging.debug("Starting boot_recovery function.")
+    try:
+        logging.info(f"Attempting to SSH into {linux_pc} for boot recovery.")
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(linux_pc, username=username, password=password)
+        logging.info(f"SSH connection established with {linux_pc} for boot recovery.")
+
+        # Corrupt VNVM to force boot recovery
+        corrupt_command = f"dd if=/dev/mtd1 of=/tmp/mtd1_start bs=1 count=$((0x1FB48)) && dd if=/dev/zero of=/tmp/zero bs=1 count=$((0x184)) && dd if=/dev/mtd1 of=/tmp/mtd1_end bs=1 skip=$((0x1FB48+0x184)) && cat /tmp/mtd1_start /tmp/zero /tmp/mtd1_end > /tmp/mtd1_new && flash_unlock -u /dev/mtd1 && flashcp -v /tmp/mtd1_new /dev/mtd1"
+        reboot_command = "reboot"
+        tnet_command = f"expect {tnet_remote_path} {stb_ip} boot_recovery"
+
+        logging.info(f"Running VNVM corrupt command on {stb_ip}: {tnet_command}")
+        stdin, stdout, stderr = ssh.exec_command(tnet_command)
+        output = stdout.read().decode()
+        error = stderr.read().decode()
+
+        if output:
+            logging.info(f"Output from VNVM corrupt command:\n{output}")
+        if error:
+            logging.error(f"Error from VNVM corrupt command:\n{error}")
+            raise Exception("Error corrupting VNVM")
+
+        # Reboot the box to enter boot recovery
+        logging.info(f"Rebooting the set-top box {stb_ip} to enter boot recovery.")
+        ssh.exec_command(reboot_command)
+        ssh.close()
+        logging.info("Boot recovery initiated and SSH connection closed.")
+
+    except Exception as e:
+        logging.error(f"Failed to initiate boot recovery: {e}")
+        
+@app.route('/api/send_output', methods=['POST'])
+def send_output():
+    data = request.get_json()
+    message = data.get("message")
+    if not message:
+        return jsonify({'error': 'No message provided'}), 400
+
+    # This could be a way to broadcast to clients or store for front-end retrieval
+    logging.info(f"Sending message to frontend: {message}")
+    
+    # Store the message or make it available for the front-end (e.g., through JavaScript long-polling or WebSocket)
+
+
+    return jsonify({'status': 'Message received'}), 200
+    
+'''
+@app.route('/chat', methods=['GET'])
+def chat():
+    return render_template('Chatbot.html')
+
+@app.route('/ollama', methods=['POST'])
+def handle_aqua_conversation():
+    """
+    Handle user conversation with Aqua, Gemma, or other models, and reference embedded logs when needed.
+    """
+    # Get the user input from the POST request body
+    data = request.get_json()
+    user_input = data.get("prompt")  # Assuming 'prompt' is the key where the input is sent
+    model = data.get("model", "Aqua")  # Default model is 'Aqua'
+    search_embeddings = data.get("search_embeddings", "no")  # Get the search_embeddings parameter
+    num_predict = data.get("num_predict", 50)
+
+    # Convert model to lowercase for case-insensitive comparison
+    model_lower = model.lower()
+
+    # Determine host IP based on the model (case-insensitive)
+    if model_lower in ["aqua", "gabriel", "alex"]:
+        host_ip = "10.79.85.40"
+    elif model_lower in ["gemma", "gemma2"]:
+        host_ip = "10.79.85.47"
+    else:
+        return jsonify({"error": "Unknown model specified."}), 400
+
+    # Step 1: Embed the user query without storing
+    try:
+        query_embedding = embed_query({"prompt": user_input, "model": model}, host_ip=host_ip, store_in_db=False)
+    except ValueError as e:
+        logging.error(f"Embedding error: {str(e)}")
+        return jsonify({"error": "Failed to embed user input."}), 500
+
+    # Step 2: Search the embedded logs for the closest match only if the checkbox is checked
+    log_response = None
+    if search_embeddings == "yes":
+        log_response = search_embeddings_in_logs(query_embedding, host_ip)
+
+    if log_response:
+        # If a relevant log is found, return the log response
+        return jsonify({"response": f"{model} found relevant logs: {log_response}"}), 200
+    else:
+        # No relevant logs found, proceed with embedding and storing the query
+        logging.debug(f"No relevant logs found, storing the query and embedding")
+        store_embedding_in_db(query_embedding, {"prompt": user_input})
+
+        # Step 3: If no logs match, fallback to normal conversation with the model
+        try:
+            response = send_to_aqua(user_input, model=model, host_ip=host_ip, num_predict=num_predict)
+
+            # Step 4: Analyze conversation for Gemma's intervention
+            if model_lower == "alex" or model_lower == "gabriel":
+                if should_gemma_intervene(user_input, response):
+                    # Let Gemma step in with her contribution
+                    gemma_response = send_to_aqua(
+                        "It seems we could explore this a bit more. Could we think more about this aspect?",
+                        model="Gemma",
+                        host_ip="10.79.85.47",
+                        num_predict=50
+                    )
+                    if gemma_response:
+                        response += f"\n\nGemma: {gemma_response}"
+
+            if response:
+                return jsonify({"response": response}), 200
+            else:
+                return jsonify({"error": f"No response generated from {model}."}), 501
+        except Exception as e:
+            logging.error(f"Failed to generate response from {model}: {str(e)}")
+            return jsonify({"error": "An error occurred processing the request."}), 502
+
+
+def should_gemma_intervene(user_input, model_response):
+    """
+    Determine if Gemma should intervene in the conversation.
+    """
+    # Basic logic to decide if Gemma should intervene
+    if "stuck" in model_response.lower() or "not sure" in model_response.lower():
+        return True
+    if "any other thoughts?" in user_input.lower() or "what else can we do?" in user_input.lower():
+        return True
+    return False
+
+def embed_query(query, host_ip, store_in_db=True):
+    """
+    Sends the query to the embedding API and optionally stores embeddings in the DB.
+    """
+    embed_url = f'http://{host_ip}:11434/api/embed'
+    headers = {'Content-Type': 'application/json'}
+
+    payload = {
+        "model": query.get("model", "Aqua"),
+        "input": query.get("prompt"),
+        "truncate": True
+    }
+
+    try:
+        logging.debug(f"Sending payload to embed URL: {embed_url}")
+        response = requests.post(embed_url, headers=headers, json=payload, timeout=120)
+        
+        if response.status_code == 200:
+            embed_response = response.json()
+            #logging.debug(f"Received response: {embed_response}")
+            
+            if 'embeddings' in embed_response and len(embed_response['embeddings']) > 0:
+                embeddings = np.array(embed_response['embeddings'])
+
+                # Ensure embeddings are 2D
+                embeddings = ensure_2d(embeddings)
+
+                if store_in_db:
+                    # Store in PostgreSQL if store_in_db flag is True
+                    store_embedding_in_db(embeddings, query, host_ip)
+
+                return embeddings
+            else:
+                logging.error(f"No embeddings generated for query: {query}. Response: {embed_response}")
+                raise ValueError("No embeddings generated for the given query.")
+        else:
+            logging.error(f"Embedding query failed with status code {response.status_code}: {response.text}")
+            raise ValueError(f"Embedding query failed with status code {response.status_code}: {response.text}")
+    except requests.RequestException as e:
+        logging.error(f"Error connecting to Embedding API: {str(e)}")
+        raise ValueError(f"Error connecting to Embedding API: {str(e)}")
+
+
+def search_logs(model, query_embedding, brainbed):
+    """
+    Search for relevant log entries based on a query from the saved embedded logs.
+    """
+    embedded_files = []
+
+    # Walk through the specified directory to find embedded log files
+    for root, dirs, files in os.walk(brainbed):
+        for file in files:
+            if file.endswith('.json'):
+                embedded_files.append(os.path.join(root, file))
+
+    logging.debug(f"Found {len(embedded_files)} files to search for query")
+
+    # Loop through the files and look for matching logs
+    best_match = None
+    best_score = -1
+
+    for embedded_file in embedded_files:
+        logging.debug(f"Checking file: {embedded_file}")
+        try:
+            with open(embedded_file, 'r') as f:
+                data = json.load(f)
+
+                if isinstance(data, list):
+                    for entry in data:
+                        if isinstance(entry, dict) and 'embedding' in entry:
+                            stored_embedding = np.array(entry['embedding']).reshape(1, -1)
+
+                            # Calculate cosine similarity between query embedding and stored embedding
+                            if stored_embedding.shape[1] == query_embedding.shape[1]:
+                                score = cosine_similarity(query_embedding, stored_embedding)[0][0]
+                                if score > best_score:
+                                    best_score = score
+                                    best_match = entry
+                else:
+                    logging.warning(f"Unexpected data format in {embedded_file}. Expected a list, but got {type(data)}")
+
+        except json.JSONDecodeError as e:
+            logging.error(f"Failed to decode JSON in {embedded_file}: {e}")
+        except Exception as e:
+            logging.error(f"Error reading or processing {embedded_file}: {str(e)}")
+
+    if best_match:
+        logging.debug(f"Best match found with score {best_score}")
+        return best_match.get('response', 'No detailed response found')
+    else:
+        logging.debug(f"No relevant logs found for query")
+        return None  # Return None explicitly if no match found
+
+def send_to_aqua(prompt, model="Aqua", host_ip="10.79.85.40", template=None, history=None, stream=False, num_predict=50):
+    """
+    Sends a request to the specified model.
+    """
+    url = f'http://{host_ip}:11434/api/generate'
+    headers = {'Content-Type': 'application/json'}
+    data = {
+        "model": model,
+        "prompt": prompt,
+        "template": template,
+        "history": history,
+        "stream": stream,
+        "num_ctx": 32768,
+        "verbose": True,
+        "save": model,
+        "num_predict": num_predict
+    }
+
+    try:
+        # logging.debug(f"Sending request to Aqua API with prompt: {prompt}")
+        response = requests.post(url, headers=headers, json=data, timeout=600)  # Increase timeout if needed
+        if response.status_code == 200:
+            response_data = response.json()
+            return response_data.get('response', 'No response received')
+        else:
+            logging.error(f"Aqua API returned status code: {response.status_code}")
+            return None
+    except requests.RequestException as e:
+        logging.error(f"Error connecting to Aqua API: {str(e)}")
+        return None
+
+
+def save_embedding_locally(embedding, query, directory="local_embeddings"):
+    """
+    Save the embedding and query information to local storage as a JSON file.
+    """
+    # Ensure the directory exists
+    os.makedirs(directory, exist_ok=True)
+
+    # Generate a unique filename for each embedding using timestamp or query hash
+    timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
+    file_name = f"embedding_{timestamp}.json"
+
+    # Metadata to store along with the embedding
+    metadata = {
+        'timestamp': timestamp,
+        'prompt': query.get('prompt', 'Unknown prompt'),
+        'embedding': embedding.tolist()  # Convert numpy array to list for JSON serialization
+    }
+
+    # File path to save the embedding
+    file_path = os.path.join(directory, file_name)
+
+    # Save the metadata as JSON
+    with open(file_path, 'w') as f:
+        json.dump([metadata], f, indent=4)
+
+    logging.debug(f"Stored embedding locally at {file_path}")
+
+# Modify the store_embedding_in_db method to also save locally
+def store_embedding_in_db(embedding, query, host_ip=None):
+    """
+    Store the embedding vector and query information into PostgreSQL and also save locally.
+    """
+    # Save locally
+    save_embedding_locally(embedding, query)
+
+    # Store in PostgreSQL (if host_ip provided)
+    if host_ip:
+        conn = psycopg2.connect(f"host={host_ip} dbname=chatbotdb user=chatbotuser password=changeme")
+        cursor = conn.cursor()
+
+        logging.debug(f"Embedding shape before storing: {embedding.shape}")
+
+        # Metadata such as timestamp and prompt can be stored for future reference
+        timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
+        prompt = query.get('prompt', 'Unknown prompt')
+
+        # Check the dimensionality of the embedding and store in the appropriate table
+        if embedding.shape[1] == 4096:
+            insert_query = """
+            INSERT INTO embeddings (embedding_vector, timestamp, prompt)
+            VALUES (%s, %s, %s)
+            """
+        elif embedding.shape[1] == 4608:
+            insert_query = """
+            INSERT INTO embeddings_4608 (embedding_vector, timestamp, prompt)
+            VALUES (%s, %s, %s)
+            """
+        else:
+            logging.error(f"Embedding has incorrect dimensions: {embedding.shape}")
+            return
+
+        cursor.execute(insert_query, (embedding.tolist(), timestamp, prompt))
+        conn.commit()
+
+        cursor.close()
+        conn.close()
+
+        logging.debug(f"Stored embedding and query into the database with timestamp {timestamp} and prompt: {prompt}.")
+
+def send_to_generate(prompt, model="Aqua", host_ip="10.79.85.40", template=None, history=None, stream=False, num_predict=50):
+    """
+    Sends a request to the specified model (Aqua or Gemma).
+    """
+    url = f'http://{host_ip}:11434/api/generate'
+    headers = {'Content-Type': 'application/json'}
+    data = {
+        "model": model,
+        "prompt": prompt,
+        "template": template,
+        "history": history,
+        "stream": stream,
+        "num_ctx": 32768,
+        "save": model,
+        "verbose": True,
+        "num_predict": num_predict
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=data, timeout=600)
+        if response.status_code == 200:
+            response_data = response.json()
+            return response_data.get('response', 'No response received')
+        else:
+            logging.error(f"{model} API returned status code: {response.status_code}")
+            return None
+    except requests.RequestException as e:
+        logging.error(f"Error connecting to {model} API: {str(e)}")
+        return None
+        
+def send_to_chat(prompt, model="Aqua", host_ip="10.79.85.40", template=None, history=None, stream=False, num_predict=50):
+    """
+    Sends a request to the specified model (Aqua or Gemma).
+    """
+    url = f'http://{host_ip}:11434/api/chat'
+    headers = {'Content-Type': 'application/json'}
+    data = {
+        "model": model,
+        "prompt": prompt,
+        "template": template,
+        "history": history,
+        "stream": stream,
+        "save": model,
+        "num_ctx": 32768,
+        "verbose": True,
+        "num_predict": num_predict
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=data, timeout=600)
+        if response.status_code == 200:
+            response_data = response.json()
+            return response_data.get('response', 'No response received')
+        else:
+            logging.error(f"{model} API returned status code: {response.status_code}")
+            return None
+    except requests.RequestException as e:
+        logging.error(f"Error connecting to {model} API: {str(e)}")
+        return None
+        
+def search_logs(model, query, brainbase):
+    """
+    Search for relevant log entries based on a query from the saved embedded logs.
+    """
+    embedded_files = []
+    
+    # Walk through the response directory to find embedded log files
+    for root, dirs, files in os.walk(brainbase):
+        for file in files:
+            if file.endswith('.json'):
+                embedded_files.append(os.path.join(root, file))
+
+    logging.debug(f"Found {len(embedded_files)} files to search for query")
+
+    # Loop through the files and look for matching logs
+    for embedded_file in embedded_files:
+        logging.debug(f"Checking file: {embedded_file}")
+        try:
+            with open(embedded_file, 'r') as f:
+                data = json.load(f)
+                #logging.debug(f"File {embedded_file} contents loaded. Data: {data}")
+                
+                if isinstance(data, dict):
+                    data = [data]  # Wrap the dictionary in a list to process it as expected
+
+                if isinstance(data, list):
+                    for entry in data:
+                        #logging.debug(f"Processing entry: {entry}")
+                        if isinstance(entry, dict) and 'response' in entry:
+                            response_data = entry['response']
+                            #logging.debug(f"response_data content: {response_data}")
+                            
+                            if isinstance(response_data, dict):
+                                # Log all fields in response_data for clarity
+                                #logging.debug(f"Fields in response_data: {list(response_data.keys())}")
+                                
+                                # Search logic: check for query in 'model'
+                                model_field = response_data.get('model', '')
+                                logging.debug(f"Checking 'model' field in response_data: {model_field}")
+                                
+                                if 'model' in response_data and query.lower() in model_field.lower():
+                                    logging.debug(f"Found matching log in {embedded_file}")
+                                    return entry['response']
+                            else:
+                                logging.warning(f"Expected 'response' field to be a dict, got {type(response_data)} instead. ")
+                        else:
+                            logging.warning(f"Entry in {embedded_file} is not formatted as expected")
+                else:
+                    logging.warning(f"Unexpected data format in {embedded_file}. Expected a list, but got {type(data)}")
+
+        except json.JSONDecodeError as e:
+            logging.error(f"Failed to decode JSON in {embedded_file}: {e}")
+        except Exception as e:
+            logging.error(f"Error reading or processing {embedded_file}: {str(e)}")
+
+    logging.debug(f"No relevant logs found for query")
+    return None  # Return None explicitly if no match found
+
+def ensure_2d(embedding):
+    """
+    Ensures that the embeddings are 2D.
+    """
+    logging.debug(f"Original embedding shape: {embedding.shape}")
+    if len(embedding.shape) == 1:
+        logging.debug("Reshaping 1D array to 2D.")
+        return embedding.reshape(1, -1)
+    elif len(embedding.shape) == 3:
+        logging.debug("Reshaping 3D array to 2D by collapsing.")
+        return embedding.reshape(embedding.shape[0], -1)
+    logging.debug("Embedding already 2D.")
+    return embedding
+    
+def search_embeddings_in_logs(query_embedding, host_ip=None):
+    """
+    Searches for relevant embeddings stored in local storage.
+    """
+    import json
+    import os
+    import numpy as np
+
+    local_dir = "./local_embeddings"
+    embedded_files = [os.path.join(local_dir, file) for file in os.listdir(local_dir) if file.endswith('.json')]
+
+    logging.debug(f"Found {len(embedded_files)} files to search for query")
+
+    best_match = None
+    best_score = -1
+
+    # Ensure query_embedding is 2D
+    query_embedding = np.array(query_embedding).reshape(1, -1)
+
+    for embedded_file in embedded_files:
+        #logging.debug(f"Checking file: {embedded_file}")
+        try:
+            with open(embedded_file, 'r') as f:
+                data = json.load(f)
+
+                # If the data is a list of dictionaries, take the first item
+                if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
+                    data = data[0]
+
+                # Verify if the format matches what we need
+                if not isinstance(data, dict) or 'embedding' not in data:
+                    logging.warning(f"Unexpected data format in {embedded_file}. Expected a dict with 'embedding' key.")
+                    continue
+
+                stored_embedding = np.array(data['embedding']).reshape(1, -1)
+
+                # Calculate similarity between query_embedding and stored_embedding
+                if stored_embedding.shape[1] == query_embedding.shape[1]:
+                    score = cosine_similarity(query_embedding, stored_embedding)[0][0]
+                    if score > best_score:
+                        best_score = score
+                        best_match = data
+
+        except json.JSONDecodeError as e:
+            logging.error(f"Failed to decode JSON in {embedded_file}: {e}")
+        except Exception as e:
+            logging.error(f"Error reading or processing {embedded_file}: {str(e)}")
+
+    if best_match:
+        logging.debug(f"Best match found with score {best_score}")
+        return best_match['prompt']
+    else:
+        logging.debug("No matching embeddings found.")
+        return None
+
+def retrieve_log_by_id(log_id, host_ip):
+    """
+    Retrieve log or prompt by embedding ID from the database.
+    """
+    conn = psycopg2.connect(f"host={host_ip} dbname=chatbotdb user=chatbotuser password=changeme")
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT prompt FROM embeddings WHERE id = %s", (log_id,))
+    log = cursor.fetchone()
+    
+    cursor.close()
+    conn.close()
+
+    if log:
+        return log[0]  # Return the matched prompt or log
+    return None
+    
+@app.route('/embed', methods=['POST'])
+def embed():
+    data = request.get_json()
+    model = data.get("model", "Alex")
+    input_data = data.get("prompt")  # Adjusted to match the API's expected input key
+    truncate = data.get("truncate", True)
+
+    # Convert model to lowercase for case-insensitive comparison
+    model_lower = model.lower()
+
+    # Determine host IP based on the model (case-insensitive)
+    if model_lower == "aqua" or model_lower == "gabriel" or model_lower == "alex":
+        host_ip = "10.79.85.40"
+    elif model_lower == "gemma" or model_lower == "gemma2":
+        host_ip = "10.79.85.47"
+    else:
+        return jsonify({"error": "Unknown model specified."}), 400
+
+
+    # Construct the API URL using the selected host_ip
+    test_url = f'http://{host_ip}:11434/api/embed'
+    payload = {
+        "model": model,
+        "input": input_data,
+        "truncate": truncate
+    }
+
+    try:
+        response = requests.post(test_url, json=payload, timeout=120)
+
+        if response.status_code == 200:
+            embed_response = response.json()
+
+            if 'embeddings' in embed_response:
+                embeddings = np.array(embed_response['embeddings'])
+                # Ensure 2D format for embeddings
+                embeddings = ensure_2d(embeddings)
+                flask_response = jsonify({"response": embeddings.tolist()})
+            else:
+                flask_response = jsonify({"error": "No embeddings found in response."}), 500
+        else:
+            flask_response = jsonify({"error": "Failed to fetch embedding."}), response.status_code
+
+        flask_response.headers['Content-Type'] = 'application/json'  # Set header for Flask response
+        return flask_response
+
+    except Exception as e:
+        flask_response = jsonify({"error": str(e)})
+        flask_response.headers['Content-Type'] = 'application/json'
+        return flask_response
+
+'''
 
 @app.route('/hostname')
 def hostname():
     return jsonify(hostname=socket.gethostname())
         
-
 def get_linux_pc_from_config(stbs):
     with open(config_file, 'r') as file:
         config_data = json.load(file)
     linux_pc = next(iter(config_data['stbs'].values()))['linux_pc']  # Fetch any linux_pc from the config
     return linux_pc
 
+
+fetcher = JAMboree_gui()
 if __name__ == '__main__':
     # app = JAMboree_gui()
     # app.mainloop()

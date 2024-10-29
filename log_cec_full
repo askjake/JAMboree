@@ -1,0 +1,39 @@
+#!/usr/bin/expect
+
+################################################################################
+# Expect script to telnet to a given IP and log the channel change
+
+if {$argc > 2} {
+ puts "Usage: tnet <ip address>"
+ puts "Ex: tnet_nfs 192.168.1.100"
+ exit
+}
+
+log_user 0
+set timeout 2
+
+set ip "192.168.1.24"
+if {$argc > 0} {
+set ip [lindex $argv 0]
+}
+set cmd "tail -1 -F /mnt/MISC_HD/nal_0.cur |grep -i -e \"cec\\|independa\\|cec_log\" \r"
+set prompt "~ #"
+
+
+
+for {set x 0} {$x<120} {incr x} {
+ # Open a telnet session to a remote server, and wait for a username prompt.
+ spawn telnet $ip
+
+ # Expect a timeout and then retry again.
+ expect {
+         timeout    {log_user 1; puts "Try Again..."; log_user 0; continue;}
+ 	 "login:"   {send "root\r"; break}
+ }
+}
+
+expect $prompt
+send $cmd
+
+interact
+

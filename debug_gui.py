@@ -35,7 +35,7 @@ user = socket.gethostname()
 s3 = 'https://ds-ghuh.dishtv.technology/upload'
 ccshare = 'https://stbAnalyticsDU.echostarbeta.com/cgi-bin/ghuh'
 
-upload_destination = ccshare
+#upload_destination = ccshare
 
 file_id = '20'
 
@@ -43,8 +43,8 @@ script_dir = os.path.abspath('scripts/')  # Adjust this path as necessary
 sys.path.append(script_dir)
 
 config_file = 'base.txt'
-found_stbs_file = 'found_stbs.json'
-credentials_file = 'credentials.json'
+found_stbs_file = 'found_stbs.txt'
+credentials_file = 'credentials.txt'
 
 def save_credentials(username, password):
     credentials = {'username': username, 'password': password}
@@ -81,7 +81,7 @@ def upload(stb_name, file_id, upload_destination):
         curl_command = (f'curl --location "{HOST}/{upload_path}" '
                         f'--header "Content-Type: application/json" '
                         f'--header "Gnat-Authorization-Key: {GNAT_AUTH_KEY}" '
-                        f'--data "{{\\"user\\": \\"{user}\\", \\"receiver_ids\\": [\\"{receiver_id}\\"], \\"upload_destination\\": \\"{upload_destination}\\", \\"file_ids\\": [{file_id}]}}"')
+                        f'--data "{{\\"user\\": \\"{user}\\", \\"receiver_ids\\": [\\"{receiver_id}\\"], \\"upload_destination\\": \\"{ccshare}\\", \\"file_ids\\": [{file_id}]}}"')
         stdout, stderr = run_curl_command(curl_command)
         if stdout:
             try:

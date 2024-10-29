@@ -1,0 +1,3 @@
+tuner 0  type sat       usage TV+      status locked    ( AV      )   by (cid  400) Living Room 1    [61664] Martin
+tuner 1  type sat       usage TV+      status locked    ( bgAV AV )   by (cid  200)                  [286] 75 Years of Armstrong: Autonomy
+tuner 2  type sat       usage EPG-     status locked    (         )   by (cid    0)                  [0] 

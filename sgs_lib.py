@@ -621,7 +621,7 @@ class STB(object):
    # return true/false if paired or not
    def pair(self):
       self.vbprint("Pair to STB")
-      querry = {"command": "device_pairing_start", "receiver": self.rid, "stb": self.stb, "app": "JAMboree", "name": "Jacob Montgomery", "type": "python", "id": "S9", "mac":self.mac}
+      querry = {"command": "device_pairing_start", "receiver": self.rid, "stb": self.stb, "app": "JAMboree", "name": "JAMboree", "type": "python", "id": "S9", "mac":self.mac}
       response = self.query_noauth (querry)
       if response["result"] != 1:
          print ("Error start pairing, result", response["result"])

@@ -5,43 +5,95 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
      <title id="host-name">STB Control Panel</title>
     <style>
-        body {
-            margin: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f0f0f0;
-        }
+	
+#chatbox {
+    position: float;
+    bottom: 0;
+    width: 50%;
+    height: 80%;
+    background-color: #f1f1f1;
+    border: 1px solid #ccc;
+    border-radius: 10px 10px 0 0;
+    padding: 10px;
+    font-family: Arial, sans-serif;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    z-index: 1000;
+}
 
-        .remote-container {
-            position: relative;
-            width: 300px; /* Adjust based on your image size */
-            height: 880px; /* Adjust based on your image size */
-            background: url('/static/images/remote.jpg') no-repeat center center;
-            background-size: contain;
-        }
+#chatbox #messages {
+    height: 150px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: white;
+}
 
-        .button {
-            position: absolute;
-            background: rgba(255, 255, 255, 0.03);
-            border: 2px solid transparent;
-            border-radius: 5px;
-            transition: background 0.3s, border 0.1s;
-        }
+#chatbox input[type="text"] {
+    width: 98%;
+    padding: 5px;
+    margin-bottom: 10px;
+}
 
-        .button:hover {
-            background: rgba(255, 255, 255, 0.2);
-            border-color: #007BFF;
-        }
+#chatbox button {
+    width: 100%;
+    padding: 5px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
 
-        .button:active {
-            background: rgba(255, 255, 255, 0.4);
-            border-color: #0056b3;
-        }
+#chatbox button:hover {
+    background-color: #45a049;
+}
+body {
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background-color: #f0f0f0;
+}
 
+.remote-container {
+    position: relative;
+    width: 20vw; /* Width as a percentage of the viewport */
+    padding-top: calc(60vw / 1); /* Maintain aspect ratio, change the ratio as per your remote's actual ratio */
+    background: url('/static/images/remote.jpg') no-repeat center center;
+    background-size: cover; /* Stretches the image to cover the container */
+    border: 2px solid transparent;
+    overflow: hidden;
+}
+
+.button {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.03);
+    border: 2px solid transparent;
+    border-radius: 5px;
+    transition: background 0.3s, border 0.1s;
+}
+
+.button:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: #007BFF;
+}
+
+.button:active {
+    background: rgba(255, 255, 255, 0.4);
+    border-color: #0056b3;
+}
         /* Adjusted button positions */
+		#sat { top: 10%; left: 2%; width: 5%; height: 4.54%; }
+		#tv { top: 16%; left: 2%; width: 5%; height: 4.54%; }
+		#aux { top: 22%; left: 2%; width: 5%; height: 4.54%; }
+		#input { top: 28%; left: 2%; width: 5%; height: 4.54%; }
+		
         #Power { top: 5.68%; left: 13.33%; width: 20%; height: 4.54%; }
+        #allUp { top: 5.68%; left: 36.67%; width: 20%; height: 4.54%; }
+        #reset { top: 5.68%; left: 66.67%; width: 20%; height: 4.54%; }
+		
         #DVR { top: 11.36%; left: 8.33%; width: 25%; height: 4.54%; }
         #Home { top: 11.36%; left: 36.67%; width: 25%; height: 4.54%; }
         #Guide { top: 11.36%; left: 66.67%; width: 25%; height: 4.54%; }
@@ -85,16 +137,51 @@
         #diamond { top: 80.68%; left: 18.33%; width: 18.33%; height: 3.98%; }
         #zero { top: 80.68%; left: 39.33%; width: 18.33%; height: 3.98%; }
         #ddiamond { top: 80.68%; left: 59.33%; width: 20%; height: 3.98%; }
+		
+		
+        .toggle-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .toggle-container input {
+            margin-right: 10px;
+        }
+		
+
+        #video-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            width: 100%;
+            max-height: 80vh;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+		
     </style>
 </head>
 <body>
-
+    <div id="control-panel">
+		
     <div class="remote-container">
-        <button onclick="location.href='/settops'">Settops</button>
+        <button onclick="location.href='/settops'">Settings</button>
         <button onclick="location.href='/apps'">dayJAM</button>
         <button onclick="location.href='http://10.74.139.230:9090/dpweb/'">Go to DPWeb</button>
+        <button class="unpair-button" id="unpairRemote">Unpair Remote</button>
+				
         
+        <div id="sat" class="button"></div>
+        <div id="tv" class="button"></div>
+        <div id="aux" class="button"></div>
+        <div id="input" class="button"></div>
         <div id="Power" class="button"></div>
+        <div id="allUp" class="button"></div>
+        <div id="reset" class="button"></div>
         <div id="DVR" class="button"></div>
         <div id="Home" class="button"></div>
         <div id="Guide" class="button"></div>
@@ -130,37 +217,85 @@
         <div id="ddiamond" class="button"></div>
     </div>
 
+</div>
     <div id="stb-list"></div>
+	 </div>
+        <input type="checkbox" id="commandModeToggle">
+		
+				<!-- Toggle for enabling video feeds -->
+		<div id="stb-list"></div>
 
+
+        <div class="controls">
+            <label>
+                <input type="checkbox" id="quick-dart-toggle"> Use QuickDart?
+            </label>
+            <label>
+                <input type="checkbox" id="video-toggle" onchange="toggleVideoFeeds()"> Activate Video Feeds
+            </label>
+        </div>
+
+    
+    <div id="video-container" style="display:none;"></div>
+</div>
+
+
+    </div>
+	
     <script>
         window.onload = function() {
             console.log('Script loaded and window.onload triggered');
+    printToOutput('Script loaded and window.onload triggered');
+        
+            // Set the toggle based on the saved cookie value
+            const commandMode = getCookie('commandMode') || 'sendCommandToStbs';
+            const commandModeToggle = document.getElementById('commandModeToggle');
+            commandModeToggle.checked = (commandMode === 'sendDart');
         
             const activeKeys = new Map(); // Track which keys are currently pressed
         
             // Bind events to all buttons in the remote container
             const buttons = document.querySelectorAll('.button');
             if (buttons.length === 0) {
+			printToOutput("No buttons found with the class '.button'");
                 console.error("No buttons found with the class '.button'");
             }
         
             buttons.forEach(button => {
+        //printToOutput(`Attaching events to button with ID: ${button.id}`);
                 console.log(`Attaching events to button with ID: ${button.id}`);
                 
                 button.addEventListener('mousedown', function() {
                     this.startTime = Date.now(); // Record start time
                     this.classList.add('pressed'); // Add pressed effect
+                    const commandFunction = commandModeToggle.checked ? sendDart : sendCommandToStbs;
+                    commandFunction(this.id, 'down');
+            //printToOutput(`Button ${this.id} mousedown event triggered`);
                     console.log(`Button ${this.id} mousedown event triggered`);
+            //printToOutput(`Button ${this.id} was pressed for ${pressDuration} milliseconds.`);
                 });
         
                 button.addEventListener('mouseup', function() {
                     const pressDuration = Date.now() - this.startTime; // Calculate press duration
                     console.log(`Button ${this.id} was pressed for ${pressDuration} milliseconds.`);
-                    sendCommandToStbs(this.id, pressDuration); // Send command with calculated delay
+			   //printToOutput(`Button ${this.id} was pressed for ${pressDuration} milliseconds.`);
+
+                    const commandFunction = commandModeToggle.checked ? sendDart : sendCommandToStbs;
+                    commandFunction(this.id, commandModeToggle.checked ? 'up' : pressDuration);
                     this.classList.remove('pressed'); // Remove pressed effect
                     console.log(`Button ${this.id} mouseup event triggered`);
+					//printToOutput(`Button ${this.id} mouseup event triggered`);
                 });
             });
+        
+            // Unpair Remote button logic
+            const unpairButton = document.getElementById('unpairRemote');
+            if (unpairButton) {
+                unpairButton.addEventListener('click', function() {
+                    unpairRemoteSequence();
+                });
+            }
+        
         
             // Key mapping for the remote buttons
             const keyMapping = {
@@ -196,12 +331,22 @@
                     console.log(`Keydown detected: ${event.code}, triggering button with ID: ${buttonId}`);
                     const button = document.getElementById(buttonId);
                     if (button) {
+                        const commandFunction = commandModeToggle.checked ? sendDart : sendCommandToStbs;
+                        commandFunction(buttonId, 'down');
                         button.classList.add('pressed'); // Visually show the button as pressed
                         button.click(); // Trigger the button click
                     }
                 }
             });
-        
+                    document.addEventListener("DOMContentLoaded", function () {
+                fetch('/hostname')
+                    .then(response => response.json())
+                    .then(data => {
+                        document.getElementById('host-name').textContent = data.hostname;
+                    })
+                    .catch(error => console.error('Error fetching hostname:', error));
+            });
+		
             // Add keyup event listener to remove 'pressed' class after key is released
             document.addEventListener('keyup', function(event) {
                 const buttonId = keyMapping[event.code];
@@ -212,15 +357,43 @@
         
                     const button = document.getElementById(buttonId);
                     if (button) {
-                        sendCommandToStbs(buttonId, pressDuration); // Send command
+                        const commandFunction = commandModeToggle.checked ? sendDart : sendCommandToStbs;
+                        commandFunction(buttonId, commandModeToggle.checked ? 'up' : pressDuration);
                         button.classList.remove('pressed'); // Remove pressed effect
                     }
                     activeKeys.delete(event.code); // Remove the key from the activeKeys map
                 }
             });
-        
             fetchStbList();
+
+            // Save the toggle state in a cookie when changed
+            commandModeToggle.addEventListener('change', function() {
+                const mode = this.checked ? 'sendDart' : 'sendCommandToStbs';
+                setCookie('commandMode', mode, 365);
+            });
         };
+        
+        function unpairRemoteSequence() {
+            const delay = 3100; // 3.1 seconds
+            const commandModeToggle = document.getElementById('commandModeToggle');
+            const commandFunction = commandModeToggle && commandModeToggle.checked ? sendDart : sendCommandToStbs;
+printToOutput('Starting unpair sequence...');
+            // Simulate pressing 'sat' for 3.1 seconds
+            commandFunction('sat', 'down');
+            setTimeout(() => {
+                commandFunction('sat', 'up');
+                printToOutput('Released "sat" button.');
+                // Simulate pressing 'DVR' and 'Guide' simultaneously for 3.1 seconds
+                commandFunction('DVR', 'down');
+                commandFunction('Guide', 'down');
+                
+                setTimeout(() => {
+                    commandFunction('DVR', 'up');
+                    commandFunction('Guide', 'up');
+					printToOutput('Released "DVR" and "Guide" buttons.');
+                }, delay);
+            }, delay);
+        }
         
 		
         // Function to send commands to all selected STBs
@@ -241,10 +414,45 @@
                     const remote = selectedOption.getAttribute('data-remote');
                     const delayInt = parseInt(delay, 10);
                     const url = `http://${hostname}:5001/auto/${remote}/${stbName}/${buttonId}/${delayInt}`;
+					//printToOutput(`Sending auto ${buttonId} to ${stbName}`);
                     fetch(url)
                         .then(response => response.json())
                         .then(data => console.log('Command response:', data))
-                        .catch(error => console.error('Error sending command:', error));
+						//.then(data => printToOutput(JSON.stringify(data)))
+                        .catch(error => console.error('Error sending command:', error))
+						.catch(error => printToOutput(`Error sending command: ${error}`));
+                } else {
+                    console.error(`STB option for ${stbName} not found.`);
+					printToOutput(`STB option for ${stbName} not found.`);
+                }
+            });
+        }
+		
+        // Function to send commands to all selected STBs
+        function sendDart(buttonId, action) {
+            const hostname = window.location.hostname;
+            const listBox = document.getElementById('stbList');
+            if (!listBox) {
+                console.error("STB list not found.");
+                printToOutput(`STB list not found: ${error}`);
+                return;
+            }
+
+            const selectedStbs = Array.from(listBox.selectedOptions).map(option => option.value);
+        
+            selectedStbs.forEach(stbName => {
+                const selectedOption = Array.from(listBox.options).find(option => option.value === stbName);
+        
+                if (selectedOption) {
+                    const remote = selectedOption.getAttribute('data-remote');
+                    const url = `http://${hostname}:5001/dart/${stbName}/${buttonId}/${action}`;
+					//printToOutput(`Sending DART ${buttonId} to ${stbName}`);
+                    fetch(url)
+                        .then(response => response.json())
+                        .then(data => console.log('Command response:', data))
+						//.then(data => printToOutput('Command response:', JSON.stringify(data)))
+                        .catch(error => console.error('Error sending command:', error))
+						.catch(error => printToOutput(`Error sending command: ${error}`));
                 } else {
                     console.error(`STB option for ${stbName} not found.`);
                 }
@@ -284,6 +492,7 @@
          
         function populateStbList(stbs) {
             console.log("Populating STB List with data:", stbs);  // Log the input data
+			//printToOutput(JSON.stringify(stbs));  // Log the input data
             const stbListDiv = document.getElementById('stb-list');
             if (!stbListDiv) {
                 console.error("Error: 'stb-list' element not found.");
@@ -334,14 +543,275 @@
             listBox.scrollTop = 0;
         }
 		
-		 document.addEventListener("DOMContentLoaded", function () {
-            fetch('/hostname')
-                .then(response => response.json())
-                .then(data => {
-                    document.getElementById('host-name').textContent = data.hostname;
-                })
-                .catch(error => console.error('Error fetching hostname:', error));
+
+
+function printToOutput(message) {
+    const outputDiv = document.getElementById('output');
+    const newMessage = document.createElement('p');
+    newMessage.textContent = message;
+    // Optionally display the message in the output div
+    // outputDiv.appendChild(newMessage);
+
+    // Send the message to Gemma
+    //sendMessageToBot(message);
+}
+
+
+        function saveConversation() {
+            const messageDiv = document.getElementById('messages');
+            let conversationText = '';
+
+            // Collect all messages
+            messageDiv.querySelectorAll('p').forEach(p => {
+                conversationText += `${p.textContent}\n`;
+            });
+
+            // Create a blob and trigger download
+            const blob = new Blob([conversationText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'conversation.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            updateMessagesHeight(); // Initial adjustment
         });
+
+        function updateMessagesHeight() {
+            const chatbox = document.getElementById('chatbox');
+            const messages = document.getElementById('messages');
+            messages.style.height = (chatbox.offsetHeight - 110) + 'px'; // Adjust height
+        }
+		
+		
+
+        function sendMessage(message, sender) {
+            const messageDiv = document.getElementById('messages');
+
+            if (!message) {
+                // Get the message from the input field
+                message = document.getElementById('user-input').value;
+                if (!message) return;
+                sender = 'You'; // Set sender to 'You' if message is from input
+            }
+
+            if (!sender) {
+                sender = 'You'; // Default sender to 'You' if not provided
+            }
+
+            // Display the sender's message
+            const userMessage = document.createElement('p');
+            userMessage.textContent = `${sender}: ${message}`;
+            messageDiv.appendChild(userMessage);
+
+            // Send the message to Aqua
+            fetch('/ollama', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: 'Aqua',
+                    prompt: message,
+                    history: true,
+                    stream: false
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                const contextToggle = document.getElementById('contextToggle').checked;
+                let aquaResponse = data.response;
+
+                if (contextToggle) {
+                    // Send the full response to Gemma
+                    //sendMessageToBot(aquaResponse);
+                } else {
+                    // Extract questions and send to Gemma
+                    const questions = extractQuestions(aquaResponse);
+                    if (questions.length > 0) {
+                        const combinedQuestions = questions.join(' ');
+                        //sendMessageToBot(combinedQuestions);
+                        // Remove the questions from Aqua's response
+                        questions.forEach(question => {
+                            aquaResponse = aquaResponse.replace(question, '').trim();
+                        });
+                    }
+                }
+
+                // Display Aqua's response without the questions (if applicable)
+                if (aquaResponse) {
+                    const botMessage = document.createElement('p');
+                    botMessage.textContent = `Aqua: ${aquaResponse}`;
+                    messageDiv.appendChild(botMessage);
+                    speak(aquaResponse, 'Aqua');
+                }
+
+                // Scroll to the bottom of the messages
+                messageDiv.scrollTop = messageDiv.scrollHeight;
+
+                // Clear input field if the message came from the input
+                if (sender === 'You') {
+                    document.getElementById('user-input').value = '';
+                }
+            })
+            .catch(error => {
+                const errorMessage = document.createElement('p');
+                errorMessage.textContent = `Error: ${error}`;
+                messageDiv.appendChild(errorMessage);
+            });
+        }
+
+        function extractQuestions(text) {
+            // Simple regex to find sentences that end with a question mark
+            const questionRegex = /[^.?!]*(\?+)/g;
+            const matches = text.match(questionRegex);
+            return matches ? matches.map(match => match.trim()) : [];
+        }
+
+        function sendMessageToBot(message) {
+            const messageDiv = document.getElementById('messages');
+            
+            // Display the message being sent to Gemma
+            const userMessage = document.createElement('p');
+            userMessage.textContent = `Aqua: ${message}`;
+            messageDiv.appendChild(userMessage);
+            speak(message, 'Aqua');
+
+            // Send the message to Gemma
+            fetch('/ollama', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: 'Gemma',
+                    prompt: message,
+                    stream: false
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Display Gemma's response
+                const gemmaMessage = document.createElement('p');
+                gemmaMessage.textContent = `Gemma: ${data.response}`;
+                messageDiv.appendChild(gemmaMessage);
+                speak(data.response, 'Gemma');
+
+                // Scroll to the bottom of the messages
+                messageDiv.scrollTop = messageDiv.scrollHeight;
+            })
+            .catch(error => {
+                const errorMessage = document.createElement('p');
+                errorMessage.textContent = `Error: ${error}`;
+                messageDiv.appendChild(errorMessage);
+            });
+        }
+
+        function speak(text, speaker) {
+            const synth = window.speechSynthesis;
+            const utterThis = new SpeechSynthesisUtterance(text);
+
+            // Customize voice for Aqua and Gemma
+            const voices = synth.getVoices();
+            if (speaker === 'Aqua') {
+                utterThis.voice = voices.find(voice => voice.name.includes("Google UK English Male")) || voices[0];
+                utterThis.pitch = 1.0; // Neutral pitch for Aqua
+            } else if (speaker === 'Gemma') {
+                utterThis.voice = voices.find(voice => voice.name.includes("Google UK English Female")) || voices[1];
+                utterThis.pitch = 1.2; // Slightly higher pitch for Gemma to sound curious
+            }
+
+            synth.speak(utterThis);
+        }
+
+        function saveConversation() {
+            const messageDiv = document.getElementById('messages');
+            let conversationText = '';
+
+            // Collect all messages
+            messageDiv.querySelectorAll('p').forEach(p => {
+                conversationText += `${p.textContent}\n`;
+            });
+
+            // Create a blob and trigger download
+            const blob = new Blob([conversationText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'conversation.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            updateMessagesHeight(); // Initial adjustment
+        });
+
+        function updateMessagesHeight() {
+            const chatbox = document.getElementById('chatbox');
+            const messages = document.getElementById('messages');
+            messages.style.height = (chatbox.offsetHeight - 110) + 'px'; // Adjust height
+        }		
+		document.getElementById('videoToggle').addEventListener('change', function() {
+    const videoContainer = document.getElementById('video-container');
+    const isActive = this.checked;
+
+    // Show or hide the video container based on the toggle
+    videoContainer.style.display = isActive ? 'block' : 'none';
+
+    // Update video display if active
+    if (isActive) {
+        updateVideoFeeds();
+    } else {
+        videoContainer.innerHTML = ''; // Clear any existing video if deactivated
+    }
+});
+
+// Function to update video feeds based on selected STBs
+function updateVideoFeeds() {
+    const videoContainer = document.getElementById('video-container');
+    const listBox = document.getElementById('stbList');
+    const selectedStbs = Array.from(listBox.selectedOptions).map(option => option.value);
+
+    // Clear the container
+    videoContainer.innerHTML = '';
+
+    selectedStbs.forEach(stbName => {
+        // Check if the STB name starts with a number between 00 and 16
+        const portMatch = stbName.match(/^(\d{2})/);
+        if (portMatch) {
+            const port = portMatch[1];
+
+            // Create an iframe for each video stream
+            const iframe = document.createElement('iframe');
+            iframe.src = `http://10.74.139.248:9090/DPStudioWebApp/StreamVideos/portview.aspx?p=${port}`;
+            iframe.style.width = '100%';
+            iframe.style.height = '100%';
+            iframe.style.border = 'none';
+
+            // Add the iframe to the video container
+            videoContainer.appendChild(iframe);
+        }
+    });
+
+    // Adjust grid layout based on the number of selected STBs
+    videoContainer.style.gridTemplateColumns = `repeat(auto-fill, minmax(${Math.max(200, 1000 / Math.min(4, selectedStbs.length))}px, 1fr))`;
+}
+
+
+// Update video feeds when the STB selection changes
+document.getElementById('stbList').addEventListener('change', function() {
+    const videoToggle = document.getElementById('videoToggle').checked;
+    if (videoToggle) {
+        updateVideoFeeds();
+    }
+});
+
 		
     </script>
 </body>

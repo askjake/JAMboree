@@ -4,65 +4,421 @@
     <meta charset="UTF-8">
     <title id="host-name">dayJAM</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+    <style>
+
+
+        #chatbox {
+            position: fixed;
+            bottom: 0;
+            left: 20px;
+            width: 600px;
+            height: 275px;
+            background-color: #f1f1f1;
+            border: 1px solid #ccc;
+            border-radius: 10px 10px 0 0;
+            padding: 10px;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            resize: both; /* Allow resizing in both directions */
+            overflow: hidden; /* Hide any overflow */
+            min-width: 200px;
+            min-height: 150px;
+        }
+
+        #chatbox #messages {
+            height: calc(100% - 110px); /* Dynamically adjust messages height */
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: white;
+        }
+
+
+        #chatbox input[type="text"], 
+        #chatbox button {
+            width: 98%;
+            padding: 5px;
+            margin-bottom: 10px;
+        }
+
+        #chatbox button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #chatbox button:hover {
+            background-color: #45a049;
+        }
+
+    </style>
 </head>
 <body>
-    <h1>dayJAM Interface</h1>
+    <h1>dayJAM by Jake</h1>
 
     <div class="navigation">
         <button onclick="location.href='/remote'">JAMboRemote</button>
-        <button onclick="location.href='/settops'">settings</button>
+        <button onclick="location.href='/settops'">Settings</button>
         <button onclick="location.href='http://10.74.139.230:9090/dpweb/'">Go to DPWeb</button>
     </div>
 
     <div class="lists">
+        <!-- Existing lists -->
         <div id="filename-group-container" class="filename-group">
-             <h2>Filename Groups</h2>
-             <select id="filename-group-list" multiple></select>
+            <h2>Filename Groups</h2>
+            <select id="filename-group-list" multiple></select>
         </div>
-		
+        
         <div id="app-list-container" class="app-list">
-            <h2>Available Apps</h2>
+            <h2>Web Apps</h2>
             <select id="app-list" multiple></select>
         </div>
 
         <div id="stb-list-container" class="stb-list">
-            <h2>Available STBs</h2>
+            <h2Settops</h2>
             <select id="stb-list" multiple></select>
+        </div>
+
+        <!-- New Software Section -->
+        <div id="parent-dir-container" class="parent-dir">
+            <h2>Categories</h2>
+            <select id="parent-dir-list" multiple></select>
+        </div>
+
+        <div id="software-list-container" class="software-list">
+            <h2>Software</h2>
+            <select id="software-list" multiple></select>
         </div>
     </div>
 
+	
+	    <!-- Add file input to select local software -->
+    <h2>Upload Local Software</h2>
+    <input type="file" id="local-software-file" />
+
     <div class="buttons">
-        <button onclick="fetchAppsList()">Refresh Lists</button>
-        <button onclick="loadApps()">Load Selected App onto Selected STBs</button>
+        <button onclick="fetchCcShareSoftware()">Refresh Software</button>
+        <button onclick="loadApps()">Load Web App onto STBs</button>
+        <button onclick="JAMSoftware()">JAM Software onto STBs</button>
+    <button onclick="uploadLocalSoftware('software')">Upload Local Software</button>
+    <button onclick="uploadLocalSoftware('app')">Upload Local Web App</button>
     </div>
 
     <div id="output"></div>
-
+	
     <!-- JavaScript -->
     <script>
-	
-document.addEventListener("DOMContentLoaded", function () {
-    fetch('/hostname')
+	    // Konami Code sequence
+    const konamiCode = [
+        "ArrowUp", "ArrowUp",
+        "ArrowDown", "ArrowDown",
+        "ArrowLeft", "ArrowRight",
+        "ArrowLeft", "ArrowRight"
+    ];
+    let konamiIndex = 0;
+
+    // Listen for keydown events
+    document.addEventListener('keydown', (event) => {
+        const key = event.key;
+        
+        // Check if the key matches the current step in the sequence
+        if (key === konamiCode[konamiIndex]) {
+            konamiIndex++;
+        } else {
+            konamiIndex = 0; // Reset if the sequence breaks
+        }
+
+        // If the entire sequence is completed, trigger the disco biscuit mode
+        if (konamiIndex === konamiCode.length) {
+            triggerDiscoBiscuit();
+            konamiIndex = 0; // Reset for potential future use
+        }
+    });
+
+    // Function to call the /disco_biscuit API
+    function triggerDiscoBiscuit() {
+        fetch('/disco_biscuit', {
+            method: 'POST'
+        })
         .then(response => response.json())
         .then(data => {
-            document.getElementById('host-name').textContent = data.hostname;
+            printToOutput(data.message || 'Disco Biscuit mode activated!');
         })
-        .catch(error => console.error('Error fetching hostname:', error));
+        .catch(error => {
+            console.error('Error triggering Disco Biscuit:', error);
+            printToOutput(`Error triggering Disco Biscuit: ${error}`);
+        });
+    }
+	
+        document.addEventListener("DOMContentLoaded", function () {
+            fetch('/hostname')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('host-name').textContent = data.hostname;
+                })
+                .catch(error => console.error('Error fetching hostname:', error));
 
-    fetchAppsList();  // Initial fetch when the page loads
-});
+            fetchAppsList();  // Initial fetch when the page loads
+            fetchSoftware(); // Fetch parent directories for software
+        });
+		
 
+        // Function to upload local software file
+        function uploadLocalSoftware(file_type) {
+        const fileInput = document.getElementById('local-software-file');
+        const selectedStb = document.querySelector('#stb-list option:checked');
+
+        if (!fileInput.files.length || !selectedStb) {
+            console.error('Please select a local file and STB.');
+            printToOutput('Please select a local file and STB.');
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append('file', fileInput.files[0]);
+        formData.append('stb', selectedStb.value);
+        formData.append('file_type', file_type);  // Pass the correct file type ("software" or "app")
+
+        fetch('/api/upload-local-software', {
+            method: 'POST',
+            body: formData,
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.status) {
+                printToOutput(`${file_type.charAt(0).toUpperCase() + file_type.slice(1)} ${fileInput.files[0].name} successfully uploaded.`);
+            } else {
+                printToOutput(`Failed to upload ${file_type}: ${result.error}`);
+            }
+        })
+        .catch(error => {
+            printToOutput(`Error uploading ${file_type}: ${error}`);
+        });
+    }
+	
+        function sendMessage() {
+            const userInput = document.getElementById('user-input').value;
+            const messageDiv = document.getElementById('messages');
+
+            if (!userInput) return;
+
+            // Display the user's message
+            const userMessage = document.createElement('p');
+            userMessage.textContent = `You: ${userInput}`;
+            messageDiv.appendChild(userMessage);
+
+            // Send the message to the chatbot API
+            fetch('/ollama', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: 'dolphin-mixtral',
+                    prompt: userInput,
+                    stream: false
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Display the chatbot's response
+                const botMessage = document.createElement('p');
+                botMessage.textContent = `Aqua: ${data.response}`;
+                messageDiv.appendChild(botMessage);
+
+                // Scroll to the bottom of the messages
+                messageDiv.scrollTop = messageDiv.scrollHeight;
+
+                // Clear input field
+                document.getElementById('user-input').value = '';
+            })
+            .catch(error => {
+                const errorMessage = document.createElement('p');
+                errorMessage.textContent = `Error: ${error}`;
+                messageDiv.appendChild(errorMessage);
+            });
+        }
+
+function printToOutput(message) {
+    const outputDiv = document.getElementById('output');
+    const newMessage = document.createElement('p');
+    newMessage.textContent = message;
+    outputDiv.appendChild(newMessage);
+
+    // Send the message to the chatbot
+    //sendMessageToBot(message);
+}
+
+    function fetchOutput() {
+        fetch('/api/get_output')
+            .then(response => response.json())
+            .then(data => {
+                if (data.messages) {
+                    data.messages.forEach(message => printToOutput(message));
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching output:', error);
+            });
+    }
+
+    // Poll for new output every 2 seconds
+    setInterval(fetchOutput, 2000);
+	
 function fetchAppsList() {
     fetch('/api/apps')
         .then(response => response.json())
         .then(data => {
             populateFilenameGroups(data);
-            fetchStbAppList();  // Fetch the STB App List after populating the filename groups
+            fetchStbAppList()  // Fetch the STB App List after populating the filename groups
         })
         .catch(error => {
             console.error('Error fetching apps:', error);
             printToOutput(`Error fetching apps: ${error}`);
+            //sendMessage(`Error fetching apps: ${error}`);
         });
+}
+
+function fetchSoftware() {
+    fetch('/get-software-list')
+        .then(response => response.json())
+        .then(data => {
+            populateParentDirList(data);
+        })
+        .catch(error => {
+            console.error('Error fetching software:', error);
+            printToOutput(`Error fetching software: ${error}`);
+            //sendMessage(`Error fetching software: ${error}`);
+        });
+}
+
+function fetchCcShareSoftware() {
+    fetch('/cc_share_software')
+        .then(response => response.json())
+        .then(data => {
+            populateParentDirList(data);
+        })
+        .catch(error => {
+            console.error('Error fetching software:', error);
+            printToOutput(`Error fetching software: ${error}`);
+            //sendMessage(`Error fetching software: ${error}`);
+        });
+}
+
+function fetchCcShareApps() {
+    fetch('/cc_share_apps')
+        .then(response => response.json())
+        .then(data => {
+            populateFilenameGroups(data);
+            fetchStbAppList()  // Fetch the STB App List after populating the filename groups
+        })
+        .catch(error => {
+            console.error('Error fetching software:', error);
+            printToOutput(`Error fetching software: ${error}`);
+            //sendMessage(`Error fetching software: ${error}`);
+        });
+}
+
+
+function populateParentDirList(softwareList) {
+            const parentDirListDiv = document.getElementById('parent-dir-list');
+            parentDirListDiv.innerHTML = '';  // Clear the current options if any
+
+            // Extract unique parent directories
+            const parentDirs = new Set();
+            softwareList.forEach(software => {
+                parentDirs.add(software.update_dir);
+            });
+
+            // Convert set to array and sort alphabetically
+            const sortedParentDirs = Array.from(parentDirs).sort();
+
+            sortedParentDirs.forEach(dir => {
+                const opt = document.createElement('option');
+                opt.value = dir;
+                opt.text = dir;
+                parentDirListDiv.appendChild(opt);
+            });
+
+            parentDirListDiv.addEventListener('change', function () {
+                const selectedDirs = this.value;
+                populateSoftwareList(softwareList, selectedDirs);
+            });
+        }
+
+function populateSoftwareList(softwareList, selectedDirs) {
+            const softwareListDiv = document.getElementById('software-list');
+            softwareListDiv.innerHTML = '';  // Clear the current options if any
+
+            // Filter the software list based on the selected parent directory
+            const filteredSoftware = softwareList.filter(software => {
+            return selectedDirs.includes(software.update_dir);  // Filter by update_dir
+            });
+
+            filteredSoftware.forEach(software => {
+                const opt = document.createElement('option');
+                opt.value = software.filename;
+                opt.text = `${software.date} - ${software.filename}`;
+                softwareListDiv.appendChild(opt);
+            });
+
+            printToOutput("Software list populated.");
+        }
+
+function JAMSoftware() {
+    const selectedSoftware = document.querySelector('#software-list option:checked');
+    const selectedDirectory = document.querySelector('#parent-dir-list option:checked');
+    const selectedStb = document.querySelector('#stb-list option:checked');
+
+    if (!selectedSoftware || !selectedDirectory || !selectedStb) {
+        console.error('Please select software, directory, and STB.');
+        printToOutput('Please select software, directory, and STB.');
+        //sendMessage('Please select software, directory, and STB.');
+        return;
+    }
+
+    const software = selectedSoftware?.value || null;
+    const directory = selectedDirectory?.value || null;
+    const stb = selectedStb?.value || null;
+
+    if (!software || !directory || !stb) {
+        console.error('Please select software, directory, and STB.');
+        printToOutput('Please select software, directory, and STB.');
+        //sendMessage('Please select software, directory, and STB.');
+        return;
+    }
+
+    const data = {
+        software: software,
+        directory: directory,
+        stb: stb,
+    };
+
+    fetch('/jam-software', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+    })
+    .then(response => response.json())
+    .then(result => {
+        if (result.status) {
+            printToOutput(`Software ${software} successfully loaded onto STB ${stb}.`);
+            //sendMessage(`Software ${software} successfully loaded onto STB ${stb}.`);
+        } else {
+            printToOutput(`Failed to load software: ${result.error}`);
+            //sendMessage(`Failed to load software: ${result.error}`);
+        }
+    })
+    .catch(error => {
+        printToOutput(`Error loading software: ${error}`);
+        //sendMessage(`Error loading software: ${error}`);
+    });
 }
 
 function populateFilenameGroups(apps) {
@@ -199,14 +555,6 @@ function loadApps() {
     });
 }
 
-function printToOutput(message) {
-    const outputDiv = document.getElementById('output');
-    const newMessage = document.createElement('p');
-    newMessage.textContent = message;
-    outputDiv.appendChild(newMessage);
-}
-
-// Fetch STB list and populate a multi-selection list
 function fetchStbList() {
     fetch('/get-stb-list')
         .then(response => response.json())
@@ -217,38 +565,6 @@ function fetchStbList() {
             console.error('Error fetching STBs:', error);
             printToOutput(`Error fetching STBs: ${error}`);
         });
-}
-
-// Fetch STB list and populate a multi-selection list
-function fetchStbAppList() {
-    fetch('/get-stb-list')
-        .then(response => response.json())
-        .then(data => {
-            populateStbAppList(data.stbs);
-        })
-        .catch(error => {
-            console.error('Error fetching STBs:', error);
-            printToOutput(`Error fetching STBs: ${error}`);
-        });
-}
- 
-function populateStbAppList(stbs) {
-    const stbListDiv = document.getElementById('stb-list');
-    stbListDiv.innerHTML = ''; // Clear previous content
-
-    // Iterate over the STBs and append options
-    Object.entries(stbs).forEach(([stbName, stbDetails]) => {
-        const opt = document.createElement('option');
-        opt.value = stbName;
-        opt.text = stbName;
-        stbListDiv.appendChild(opt);
-
-        // Debugging log
-        console.log(`Appending STB option: ${stbName}`);
-        //printToOutput(`Appending STB option: ${stbName}`);
-    });
-
-    console.log(stbListDiv.innerHTML); // Log the final HTML of the select element
 }
 
 function populateStbList(stbs) {

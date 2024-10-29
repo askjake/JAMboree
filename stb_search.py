@@ -43,8 +43,8 @@ def update_stb_ip():
                     updated = True
                     print(f"Updated IP for {stb} to {new_ip}")
                 break
-        
-        if not found:
+
+        '''if not found:
             new_name = f"{model}-{len(config_data['stbs']) + 1}"
             config_data["stbs"][new_name] = {
                 'stb': stb,
@@ -55,13 +55,14 @@ def update_stb_ip():
                 'remote': '0',
                 "lname": "v0001_client_9830a9879da74b50707792e71dca446da28c3bda",
                 "passwd": "35d1ea1fa281ed26a646f4f6b573b90cf1a0d18e",
+                "prod": "",
                 "linux_pc": "",
                 "com_port": "",
                 "master_stb": "",
                 "rid": ""
             }
             updated = True
-            print(f"Added {new_name} with IP {new_ip} and STB {stb}.")
+            print(f"Added {new_name} with IP {new_ip} and STB {stb}.")'''
 
     if updated:
         with open(config_file, 'w') as file:
@@ -159,4 +160,4 @@ while True:
 
     print()
 
-    time.sleep(1000)
+    time.sleep(10)

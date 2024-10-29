@@ -48,6 +48,50 @@
         .save-btn:hover {
             background-color: #007bb5;
         }
+		
+#chatbox {
+    position: fixed;
+    bottom: 0;
+    width: 90%;
+    height: 265px;
+    background-color: #f1f1f1;
+    border: 1px solid #ccc;
+    border-radius: 10px 10px 0 0;
+    padding: 10px;
+    font-family: Arial, sans-serif;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    z-index: 1000;
+}
+
+#chatbox #messages {
+    height: 150px;
+    overflow-y: auto;
+    border: 1px solid #ccc;
+    padding: 10px;
+    margin-bottom: 10px;
+    background-color: white;
+}
+
+#chatbox input[type="text"] {
+    width: 98%;
+    padding: 5px;
+    margin-bottom: 10px;
+}
+
+#chatbox button {
+    width: 100%;
+    padding: 5px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+#chatbox button:hover {
+    background-color: #45a049;
+}
+
     </style>
 </head>
 <body>
@@ -82,6 +126,8 @@
     <button class="add-row-btn" onclick="addRow()">Add New Row</button>
     <button class="save-btn" onclick="saveChanges()">Save Changes</button>
 
+
+	
     <script>
         let stbData = {};
         let originalData = {};
@@ -360,7 +406,75 @@ function saveChanges() {
     })
     .catch(error => console.error('Error saving changes:', error));
 }
+function sendMessageToBot(message) {
+    const messageDiv = document.getElementById('messages');
+    
+    // Display the message in the chatbox
+    const userMessage = document.createElement('p');
+    userMessage.textContent = `You: ${message}`;
+    messageDiv.appendChild(userMessage);
 
+    // Send the message to the chatbot API
+    fetch('/ollama', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            model: 'dolphin-mixtral',
+            prompt: message,
+            stream: false
+        }),
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Display the chatbot's response
+        const botMessage = document.createElement('p');
+        botMessage.textContent = `Bot: ${data.response}`;
+        messageDiv.appendChild(botMessage);
+        
+        // Scroll to the bottom of the messages
+        messageDiv.scrollTop = messageDiv.scrollHeight;
+    })
+    .catch(error => {
+        const errorMessage = document.createElement('p');
+        errorMessage.textContent = `Error: ${error}`;
+        messageDiv.appendChild(errorMessage);
+    });
+}
+
+function printToOutput(message) {
+    const outputDiv = document.getElementById('output');
+    const newMessage = document.createElement('p');
+    newMessage.textContent = message;
+    outputDiv.appendChild(newMessage);
+
+    // Send the message to the chatbot
+    sendMessageToBot(message);
+}
+
+function makeElementDraggable(el) {
+    el.onmousedown = function (e) {
+        e.preventDefault();
+        let shiftX = e.clientX - el.getBoundingClientRect().left;
+        let shiftY = e.clientY - el.getBoundingClientRect().top;
+
+        document.onmousemove = function (e) {
+            el.style.left = e.pageX - shiftX + 'px';
+            el.style.top = e.pageY - shiftY + 'px';
+        };
+
+        document.onmouseup = function () {
+            document.onmousemove = null;
+            el.onmouseup = null;
+        };
+    };
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    makeElementDraggable(document.getElementById('chatbox'));
+});
+		
     </script>
 </body>
 </html>

@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="host-name">STB Control Panel</title>
+    <style>
+        /* Chatbox styles */
+        #chatbox {
+            position: float;
+            bottom: 0;
+            width: 50%;
+            height: 80%;
+            background-color: #f1f1f1;
+            border: 1px solid #ccc;
+            border-radius: 10px 10px 0 0;
+            padding: 10px;
+            font-family: Arial, sans-serif;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+        }
+
+        #chatbox #messages {
+            height: 60%;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: white;
+        }
+
+        #chatbox input[type="text"], #chatbox input[type="number"] {
+            width: 98%;
+            padding: 5px;
+            margin-bottom: 10px;
+        }
+
+        #chatbox button {
+            width: 100%;
+            padding: 5px;
+            background-color: #4CAF50;
+            color: white;
+            border: black;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        #chatbox button:hover {
+            background-color: #45a049;
+        }
+
+        .drop-zone {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .drop-zone.dragover {
+            background-color: #e8f7ff;
+        }
+		
+        /* Dropdown styles */
+        .dropdown-container {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .dropdown-container select {
+            width: 45%;
+            padding: 5px;
+        }
+
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+    </style>
+</head>
+<body>
+    <div id="chatbox">
+        <div class="drop-zone" id="drop-zone">
+            Drag and drop a file here or click to select a file.
+        </div>
+        <div id="messages"></div>
+        <input type="text" id="user-input" placeholder="Type your message...">
+        <input type="number" id="max-tokens-input" placeholder="Max Tokens (default 100)" value="100" min="1">
+        <button onclick="sendMessage()">Send</button>
+        <button onclick="saveConversation()">Save Conversation</button>
+
+        <div class="dropdown-container">
+            <label for="ai1Model">#1:</label>
+            <select id="ai1Model" onchange="updateModelCookie('AI1')">
+                <option value="Aqua">Aqua</option>
+                <option value="Aqua2">Aqua2</option>
+                <option value="AquaHumor">AquaHumor</option>
+                <option value="Gemma">Gemma</option>
+                <option value="Gabriel">Gabriel</option>
+                <option value="Alex">Alex</option>
+                <option value="GemmaHumor">GemmaHumor</option>
+            </select>
+            <label for="ai2Model">#2:</label>
+            <select id="ai2Model" onchange="updateModelCookie('AI2')">
+                <option value="Gabriel">Gabriel</option>
+                <option value="Gemma">Gemma</option>
+                <option value="GemmaHumor">GemmaHumor</option>
+                <option value="Aqua2">Aqua2</option>
+                <option value="Alex">Alex</option>
+                <option value="AquaHumor">AquaHumor</option>
+                <option value="Aqua">Aqua</option>
+            </select>
+        </div>
+        <div class="toggle-container">
+            <label for="contextToggle">Send full response</label>
+            <input type="checkbox" id="contextToggle">
+        </div>
+        <label for="searchEmbeddingsToggle">Search Embeddings</label>
+        <input type="checkbox" id="searchEmbeddingsToggle">
+        <div class="toggle-container">
+            <label for="ai1MuteToggle">Mute AI1</label>
+            <input type="checkbox" id="ai1MuteToggle">
+            <label for="ai2MuteToggle">Mute AI2</label>
+            <input type="checkbox" id="ai2MuteToggle">
+            <label for="gabrielMuteToggle">Mute Gabriel</label>
+            <input type="checkbox" id="gabrielMuteToggle">
+        <div class="toggle-container">
+        </div>
+    </div>
+    
+    <script>
+        // Handle drag-and-drop file upload
+        const dropZone = document.getElementById('drop-zone');
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('dragover');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('dragover');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            handleFileUpload(files);
+        });
+
+        dropZone.addEventListener('click', () => {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.onchange = () => {
+                const files = fileInput.files;
+                handleFileUpload(files);
+            };
+            fileInput.click();
+        });
+
+        function handleFileUpload(files) {
+            const modelAI1 = getCookie('AI1') || 'Aqua';
+            for (let i = 0; i < files.length; i++) {
+                const formData = new FormData();
+                formData.append('file', files[i]);
+                formData.append('model', modelAI1);
+
+                fetch('/upload-log', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const messageDiv = document.getElementById('messages');
+                    const responseMessage = document.createElement('p');
+                    responseMessage.textContent = `Log Analysis Result: ${data.result}`;
+                    messageDiv.appendChild(responseMessage);
+                })
+                .catch(error => {
+                    console.error('Error uploading file:', error);
+                });
+            }
+        }
+
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1);
+                if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
+        }
+
+        function sendMessage(message, sender) {
+            const messageDiv = document.getElementById('messages');
+            const modelAI1 = getCookie('AI1') || 'Aqua';
+            const modelAI2 = getCookie('AI2') || 'Gemma';
+            const maxTokens = parseInt(document.getElementById('max-tokens-input').value) || 100;
+
+            if (!message) {
+                message = document.getElementById('user-input').value;
+                if (!message) return;
+                sender = 'You';
+            }
+
+            if (!sender) sender = 'You';
+
+            const searchEmbeddings = document.getElementById('searchEmbeddingsToggle')?.checked ? "yes" : "no";
+            const userMessage = document.createElement('p');
+            userMessage.textContent = `${sender}: ${message}`;
+            messageDiv.appendChild(userMessage);
+
+            const isAtBottom = messageDiv.scrollTop + messageDiv.clientHeight >= messageDiv.scrollHeight - 10;
+
+            // Check if AI1 is muted
+            if (!document.getElementById('ai1MuteToggle').checked) {
+                fetch('/ollama', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        model: modelAI1,
+                        prompt: message,
+                        search_embeddings: searchEmbeddings,
+                        history: true,
+                        stream: false,
+                        max_tokens: maxTokens // Use the user-defined max tokens
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    let responseAI1 = data.response;
+                    const botMessage = document.createElement('p');
+                    botMessage.textContent = `${modelAI1}: ${responseAI1}`;
+                    messageDiv.appendChild(botMessage);
+
+                    if (document.getElementById('contextToggle').checked) {
+                        sendMessageToBot(responseAI1, modelAI2);  // Send full response to AI2
+                    } else {
+                        const questions = extractQuestions(responseAI1);
+                        if (questions.length > 0) {
+                            const combinedQuestions = questions.join(' ');
+                            sendMessageToBot(combinedQuestions, modelAI2);
+                            questions.forEach(question => {
+                                responseAI1 = responseAI1.replace(question, '').trim();
+                            });
+                        }
+                    }
+
+                    if (responseAI1) {
+                        speak(responseAI1, modelAI1);
+                    }
+
+                    // Send the conversation to Gabriel for observation
+                    if (!document.getElementById('gabrielMuteToggle').checked) {
+                        sendToGabriel(`${sender}: ${message} ${modelAI1}: ${responseAI1}`);
+                    }
+
+                    if (isAtBottom) {
+                        messageDiv.scrollTop = messageDiv.scrollHeight;
+                    }
+
+                    document.getElementById('user-input').value = '';
+                })
+                .catch(error => {
+                    const errorMessage = document.createElement('p');
+                    errorMessage.textContent = `Error: ${error}`;
+                    messageDiv.appendChild(errorMessage);
+                });
+            }
+        }
+
+        function sendToGabriel(conversation) {
+            fetch('/ollama', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: 'Gabriel',
+                    prompt: conversation,
+                    history: true,
+                    stream: false,
+                    max_tokens: 100
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.response && !document.getElementById('gabrielMuteToggle').checked) {
+                    const messageDiv = document.getElementById('messages');
+                    const gabrielMessage = document.createElement('p');
+                    gabrielMessage.textContent = `${data.response}`;
+                    messageDiv.appendChild(gabrielMessage);
+                }
+            })
+            .catch(error => {
+                console.error('Error sending to Gabriel:', error);
+            });
+        }
+
+        function sendMessageToBot(message, modelAI2) {
+            // Check if AI2 is muted
+            if (document.getElementById('ai2MuteToggle').checked) {
+                return;
+            }
+
+            const messageDiv = document.getElementById('messages');
+            const maxTokens = parseInt(document.getElementById('max-tokens-input').value) || 100;
+
+            fetch('/ollama', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    model: modelAI2,  // Use selected model for AI2
+                    prompt: message,
+                    stream: false,
+                    max_tokens: maxTokens
+                }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                const botMessage = document.createElement('p');
+                botMessage.textContent = `${modelAI2}: ${data.response}`;
+                messageDiv.appendChild(botMessage);
+
+                speak(data.response, modelAI2);
+
+                messageDiv.scrollTop = messageDiv.scrollHeight;
+            })
+            .catch(error => {
+                const errorMessage = document.createElement('p');
+                errorMessage.textContent = `Error: ${error}`;
+                messageDiv.appendChild(errorMessage);
+            });
+        }
+
+        function updateModelCookie(model) {
+            const modelValue = document.getElementById(model === 'AI1' ? 'ai1Model' : 'ai2Model').value;
+            setCookie(model, modelValue, 365);
+        }
+
+        function getCookie(name) {
+            const nameEQ = name + "=";
+            const ca = document.cookie.split(';');
+            for (let i = 0; i < ca.length; i++) {
+                let c = ca[i];
+                while (c.charAt(0) === ' ') c = c.substring(1);
+                if (c.indexOf(nameEQ) === 0) return c.substring(nameEQ.length, c.length);
+            }
+            return null;
+        }
+
+        function extractQuestions(text) {
+            const questionRegex = /[^.?!]*(\?+)/g;
+            const matches = text.match(questionRegex);
+            return matches ? matches.map(match => match.trim()) : [];
+        }
+
+        function speak(text, model) {
+            const synth = window.speechSynthesis;
+            const utterThis = new SpeechSynthesisUtterance(text);
+            const voices = synth.getVoices();
+            if (model === 'Aqua') {
+                utterThis.voice = voices.find(voice => voice.name.includes("Google UK English Male")) || voices[0];
+                utterThis.pitch = 1.0;
+            } else if (model === 'Gemma') {
+                utterThis.voice = voices.find(voice => voice.name.includes("Google UK English Female")) || voices[1];
+                utterThis.pitch = 1.2;
+            }
+            synth.speak(utterThis);
+        }
+
+        function saveConversation() {
+            const messageDiv = document.getElementById('messages');
+            let conversationText = '';
+            messageDiv.querySelectorAll('p').forEach(p => {
+                conversationText += `${p.textContent}\n`;
+            });
+            const blob = new Blob([conversationText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'conversation.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+
+        function setCookie(name, value, days) {
+            const d = new Date();
+            d.setTime(d.getTime() + (days * 24 * 60 * 60 * 1000));
+            const expires = "expires=" + d.toUTCString();
+            document.cookie = name + "=" + value + ";" + expires + ";path=/";
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const savedModelAI1 = getCookie('AI1') || 'Aqua';
+            const savedModelAI2 = getCookie('AI2') || 'Gemma';
+            document.getElementById('ai1Model').value = savedModelAI1;
+            document.getElementById('ai2Model').value = savedModelAI2;
+        });
+
+        function updateMessagesHeight() {
+            const chatbox = document.getElementById('chatbox');
+            const messages = document.getElementById('messages');
+            messages.style.height = (chatbox.offsetHeight - 110) + 'px'; // Adjust height
+        }
+    </script>
+</body>
+</html>

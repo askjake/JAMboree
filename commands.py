@@ -5,6 +5,8 @@ def get_button_codes(button_id):
     button_number = button_id_to_number.get(button_id.lower())
     return button_commands.get(button_number)
 
+def get_button_number(button_id):
+    return button_id_to_number.get(button_id.lower())
 
 def get_sgs_codes(button_id, delay):
     button_id = button_id.lower()
@@ -102,14 +104,16 @@ button_id_to_number = {
     'upair1': '39', # 8C, 8B
     'pair_up': '40', # 0B, 03
     'upair2': '40', # 0B, 03
-    'reset': '41',
+    #'reset': '41',
     'sys info': '42',
     'live tv': '110',
     'pip toggle': '44',
     'fast forward': '160',
     'skip forward': '16',
     'dvr_guide': '42',
-    'pair': 'pair'
+    'pair': 'pair',
+    'reset': '99',
+    'allup': '86'
     
 
 }
@@ -158,6 +162,8 @@ button_commands = {
     '40': {'KEY_CMD': '0B', 'KEY_RELEASE': '03'},
     '41': {'KEY_CMD': 'reset', 'KEY_RELEASE': 'reset'},
     '42': {'KEY_CMD': 'reset', 'KEY_RELEASE': 'reset'},
+    '86': {'KEY_CMD': '01', 'KEY_RELEASE': '0C'},
+    '99': {'KEY_CMD': 'reset', 'KEY_RELEASE': 'reset'},
 }
 
 sgs_commands = {

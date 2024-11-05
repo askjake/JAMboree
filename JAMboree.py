@@ -1431,7 +1431,20 @@ class JAMboree_gui(tk.Tk):
                 self.serial_connection.write(message)
                 self.serial_connection.flush()
                 time.sleep((delay + 30) / 1000.0)
-                response = self.serial_connection.read_all().decode('utf-8').strip()
+                response_bytes = self.serial_connection.read_all()
+                logging.debug(f"Raw bytes received from serial port: {response_bytes}")
+
+                # Attempt to decode the response
+                try:
+                    response = response_bytes.decode('utf-8').strip()
+                except UnicodeDecodeError as e_utf8:
+                    logging.warning(f"UTF-8 decoding failed: {e_utf8}. Trying 'latin-1'.")
+                    try:
+                        response = response_bytes.decode('latin-1').strip()
+                    except UnicodeDecodeError as e_latin1:
+                        logging.error(f"'latin-1' decoding failed: {e_latin1}. Displaying raw hex.")
+                        response = ' '.join(f'{b:02X}' for b in response_bytes)
+
                 logging.debug(f"RF command response: {response}")
                 self.output_text.insert(tk.END, f"{response}\n")
                 self.output_text.see(tk.END)
@@ -1442,7 +1455,7 @@ class JAMboree_gui(tk.Tk):
                 return f"Failed to send RF command: {str(e)}", 500
 
         return response, 200
-		
+    
     def start_command_processor(self):
         threading.Thread(target=self.process_commands, daemon=True).start()
 
@@ -1891,18 +1904,18 @@ def handle_auto_remote(remote, stb_name, button_id, delay):
         if protocol == 'RF':
             press_count += 1  # Increment press count
             response = app.config['controller'].rf_remote(com_port, remote, button_id, delay)
-            time.sleep(delay)
-            response = app.config['controller'].rf_remote(com_port, remote, 'allup', delay)
+            #time.sleep(delay)
+            #response = app.config['controller'].rf_remote(com_port, remote, 'allup', delay)
 
             # Call 'reset' every 10 presses
-            if press_count % 10 == 0:
-                response = app.config['controller'].rf_remote(com_port, remote, 'reset', delay)
-                logging.info(f"Reset command sent after {press_count} button presses.")
+            #if press_count % 10 == 0:
+                #response = app.config['controller'].rf_remote(com_port, remote, 'reset', delay)
+                #logging.info(f"Reset command sent after {press_count} button presses.")
         
         elif protocol == 'SGS':
             response = app.config['controller'].sgs_remote(stb_name, stb_ip, rxid, button_id, delay)
 
-        return jsonify({'response': response, 'timestamp': datetime.now(timezone.utc).isoformat()})
+        return jsonify({'BOOM': response, 'timestamp': datetime.now(timezone.utc).isoformat()})
 
     except FileNotFoundError:
         return jsonify({'error': 'Configuration file not found'}), 500
@@ -2349,117 +2362,6 @@ def load_app_internal(data):
     with app.test_request_context('/api/load_app', method='POST', data=data):
         return load_app()
         
-@app.route('/api/load_app', methods=['POST'])
-@app.route('/api/load_app/<stb_name>/<app>', methods=['GET'])
-def load_app(stb_name=None, app=None):
-    logging.debug("Received request to load app.")
-    
-    # Check if it's a GET request with URL parameters or POST request with JSON/form-data
-    if request.method == 'GET' and stb_name and app:
-        selected_stb = stb_name
-        selected_file = app
-    else:
-        if request.is_json:  # Handle JSON request (external API call)
-            data = request.json
-            selected_file = data.get('app')
-            selected_stb = data.get('stb')
-        else:  # Handle form-data (internal API call)
-            selected_file = request.form.get('app')
-            selected_stb = request.form.get('stb')
-
-    logging.debug(f"Selected app: {selected_file}, Selected STB: {selected_stb}")
-
-    if not selected_file or not selected_stb:
-        logging.error("App or STB not selected.")
-        return jsonify({'error': 'App or STB not selected'}), 400
-
-    local_apps = os.path.join(apps_dir, selected_file)
-
-    try:
-        # Load configuration
-        with open(config_file, 'r') as file:
-            config_data = json.load(file)
-            stbs = config_data.get('stbs', {})
-            stb_info = stbs.get(selected_stb)
-            if not stb_info:
-                logging.error(f"STB {selected_stb} not found in configuration.")
-                return jsonify({'error': f"STB {selected_stb} not found in configuration"}), 404
-
-            stb_ip = stb_info.get('ip')
-            linux_pc = stb_info.get('linux_pc')
-            logging.debug(f"STB IP: {stb_ip}, Linux PC: {linux_pc}")
-
-            if not stb_ip:
-                logging.error(f"Failed to find IP for STB: {selected_stb}")
-                return jsonify({'error': f"Failed to find IP for STB: {selected_stb}"}), 404
-
-        # Load credentials
-        credentials = load_credentials()
-        username = credentials.get('username')
-        password = credentials.get('password')
-        linux_pc = credentials.get('linux_pc')
-        logging.debug(f"Loaded credentials for user: {username}")
-
-        # Establish SSH connection
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(linux_pc, username=username, password=password)
-        sftp = ssh.open_sftp()
-        logging.info(f"Connected to Linux PC: {linux_pc}")
-
-        # Safely process the selected file name
-        if ' - ' in selected_file:
-            app_filename = selected_file.split(' - ')[1]
-        else:
-            app_filename = selected_file
-            logging.warning(f"Unexpected file format for selected_file: {selected_file}. Using full string as app filename.")
-
-        cc_share = f"/ccshare/linux/c_files/signed-browser-applications/internal/{app_filename}"
-        local_apps = os.path.join(apps_dir, app_filename)
-        linux_pc_dir = f'/home/{username}/stbmnt/apps'
-        linux_pc_app = os.path.join(linux_pc_dir, selected_file).replace("\\", "/")
-
-        logging.debug(f"App filename: {app_filename},\n CC Share Path: {cc_share},\n Local Apps Path: {local_apps},\n Linux PC App Path: {linux_pc_app}")
-
-        # Ensure the local apps directory exists
-        if not os.path.exists(apps_dir):
-            os.makedirs(apps_dir)
-            logging.info(f"Created local apps directory: {apps_dir}")
-
-        # Download the app if not already available locally
-        if not os.path.exists(local_apps):
-            logging.info(f"Downloading {app_filename} from CC Share.")
-            sftp.get(cc_share, local_apps)
-        else:
-            logging.info(f"{app_filename} already exists locally, skipping download.")
-
-        # Ensure the Linux PC directory exists
-        try:
-            sftp.chdir(linux_pc_dir)
-            logging.info(f"Changed to Linux PC directory: {linux_pc_dir}")
-        except IOError:
-            logging.info(f"Creating directory on Linux PC: {linux_pc_dir}")
-            ssh.exec_command(f"mkdir -p {linux_pc_dir}")
-
-        # Upload the app to the Linux PC if it does not already exist there
-        try:
-            sftp.stat(linux_pc_app)
-            logging.info(f"App already exists on Linux PC: {linux_pc_app}")
-        except FileNotFoundError:
-            logging.info(f"Uploading {app_filename} to Linux PC.")
-            sftp.put(local_apps, linux_pc_app)
-
-        sftp.close()
-        ssh.close()
-        logging.info(f"App {app_filename} loaded successfully onto {linux_pc}.")
-        
-        run_commands_over_ssh(linux_pc, username, password, stb_ip, app_filename)
-
-        return jsonify({'status': 'App successfully prepared'}), 200
-
-    except Exception as e:
-        logging.error(f"Error during app load: {str(e)}")
-        return jsonify({'error': str(e)}), 500
 
 @app.route('/jam-software', methods=['GET', 'POST'], strict_slashes=False)
 def jam_software(stb_name=None, software=None):
@@ -2578,12 +2480,6 @@ def run_commands_over_ssh(linux_pc, username, password, stb_ip, app):
         ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
         ssh.connect(linux_pc, username=username, password=password)
         logging.info(f"SSH connection established with {linux_pc}.")
-        
-        # Helper function to send output to the frontend
-        def send_to_frontend(message):
-            requests.post('http://localhost:5001/api/send_output', json={"message": message})
-
-        send_to_frontend("SSH connection established.")
 
         linux_pc_stbmnt = f'/home/{username}/stbmnt'
         tnet_remote_path = f"{linux_pc_stbmnt}/tnet.jam"
@@ -2597,11 +2493,10 @@ def run_commands_over_ssh(linux_pc, username, password, stb_ip, app):
         try:
             logging.info(f"Uploading tnet.jam to {linux_pc}:{tnet_remote_path}.")
             sftp.put(tnet_local, tnet_remote_path)
-            send_to_frontend(f"tnet.jam uploaded successfully to {tnet_remote_path}.")
+            logging.debug(f"tnet.jam uploaded successfully to {tnet_remote_path}.")
+            print(f"tnet.jam uploaded successfully to {tnet_remote_path}.")
         except FileNotFoundError:
-            error_msg = f"tnet.jam not found locally or unable to upload to {tnet_remote_path}."
-            logging.error(error_msg)
-            send_to_frontend(error_msg)
+            logging.error(f"tnet.jam not found locally or unable to upload to {tnet_remote_path}.")
             raise
 
         sftp.close()
@@ -2612,34 +2507,118 @@ def run_commands_over_ssh(linux_pc, username, password, stb_ip, app):
 
         stdin, stdout, stderr = ssh.exec_command(command)
 
-        # Capture output from stdout and stderr
         output = stdout.read().decode()
         error = stderr.read().decode()
 
         if output:
             logging.info(f"Output from tnet command:\n{output}")
-            send_to_frontend(f"Output from tnet command:\n{output}")
+            print(f"Output from tnet command:\n{output}")
             
             # Check if recovery is required
             if "please put your box in boot recovery" in output.lower():
-                send_to_frontend("Boot recovery is required. Initiating boot recovery...")
+                logging.info("Boot recovery is required. Initiating boot recovery...")
                 boot_recovery(linux_pc, username, password, stb_ip)
-                send_to_frontend("Re-running commands after boot recovery...")
-                time.sleep(45)
+                logging.info("Re-running run_commands_over_ssh after boot recovery...")
+                time.sleep(30)
                 run_commands_over_ssh(linux_pc, username, password, stb_ip, app)  # Re-run the command after recovery
                 return
 
         if error:
             logging.error(f"Error from tnet command:\n{error}")
-            send_to_frontend(f"Error from tnet command:\n{error}")
+            print(f"Error from tnet command:\n{error}")
 
         ssh.close()
         logging.info("SSH connection closed.")
-        send_to_frontend("SSH connection closed successfully.")
 
     except Exception as e:
         logging.error(f"Failed to execute commands over SSH: {e}")
-        send_to_frontend(f"Failed to execute commands over SSH: {e}")
+    finally:
+        logging.info("Stopping any music playback.")
+        pygame.mixer.music.stop()
+
+# Set up logging to file
+logging.basicConfig(
+    filename='logJAM.txt',
+    level=logging.DEBUG,
+    format='%(asctime)s %(levelname)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+
+log_output = ""  # Global variable to hold the tnet.jam output
+
+
+@app.route('/api/load_app', methods=['POST'])
+@app.route('/api/load_app/<stb_name>/<app>', methods=['GET'])
+def load_app(stb_name=None, app=None):
+    global log_output  # Use the global log_output variable
+    logging.debug("Received request to load app.")
+    
+    # Existing code to handle loading an app goes here...
+
+    # After successfully loading the app, run commands over SSH
+    try:
+        run_commands_over_ssh(linux_pc, username, password, stb_ip, app)
+        return jsonify({'status': 'App successfully prepared'}), 200
+    except Exception as e:
+        logging.error(f"Error during app load: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+def run_commands_over_ssh(linux_pc, username, password, stb_ip, app):
+    global log_output
+    logging.debug("Starting run_commands_over_ssh function.")
+    logging.debug(f"Parameters received - Linux PC: {linux_pc}, Username: {username}, STB IP: {stb_ip}, App: {app}")
+
+    try:
+        logging.info(f"Attempting to SSH into {linux_pc}.")
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(linux_pc, username=username, password=password)
+        logging.info(f"SSH connection established with {linux_pc}.")
+
+        linux_pc_stbmnt = f'/home/{username}/stbmnt'
+        tnet_remote_path = f"{linux_pc_stbmnt}/tnet.jam"
+
+        # Using SFTP to upload the tnet.jam file
+        sftp = ssh.open_sftp()
+        sftp.put('tnet.jam', tnet_remote_path)
+        logging.debug(f"tnet.jam uploaded successfully to {tnet_remote_path}.")
+        sftp.close()
+
+        # Command to be executed on the remote Linux PC
+        command = f"expect {tnet_remote_path} {stb_ip} apps {app}"
+        logging.info(f"Running command on {linux_pc}: {command}")
+
+        stdin, stdout, stderr = ssh.exec_command(command)
+
+        # Capture the output in real-time and store it in the global log_output variable
+        def capture_output(stream):
+            global log_output
+            for line in iter(stream.readline, ""):
+                logging.info(f"Output from tnet command: {line.strip()}")
+                log_output += line.strip() + "\n"
+
+        # Use threading to read stdout and stderr concurrently
+        stdout_thread = threading.Thread(target=capture_output, args=(stdout,))
+        stderr_thread = threading.Thread(target=capture_output, args=(stderr,))
+        stdout_thread.start()
+        stderr_thread.start()
+        stdout_thread.join()
+        stderr_thread.join()
+
+        ssh.close()
+        logging.info("SSH connection closed.")
+
+    except Exception as e:
+        logging.error(f"Failed to execute commands over SSH: {e}")
+
+# Endpoint to retrieve the log output for the webpage
+@app.route('/get_log_output', methods=['GET'])
+def get_log_output():
+    global log_output
+    return jsonify({'log_output': log_output})
+
+
+
 def boot_recovery(linux_pc, username, password, stb_ip):
     logging.debug("Starting boot_recovery function.")
     try:
@@ -2674,556 +2653,7 @@ def boot_recovery(linux_pc, username, password, stb_ip):
     except Exception as e:
         logging.error(f"Failed to initiate boot recovery: {e}")
         
-@app.route('/api/send_output', methods=['POST'])
-def send_output():
-    data = request.get_json()
-    message = data.get("message")
-    if not message:
-        return jsonify({'error': 'No message provided'}), 400
 
-    # This could be a way to broadcast to clients or store for front-end retrieval
-    logging.info(f"Sending message to frontend: {message}")
-    
-    # Store the message or make it available for the front-end (e.g., through JavaScript long-polling or WebSocket)
-
-
-    return jsonify({'status': 'Message received'}), 200
-    
-'''
-@app.route('/chat', methods=['GET'])
-def chat():
-    return render_template('Chatbot.html')
-
-@app.route('/ollama', methods=['POST'])
-def handle_aqua_conversation():
-    """
-    Handle user conversation with Aqua, Gemma, or other models, and reference embedded logs when needed.
-    """
-    # Get the user input from the POST request body
-    data = request.get_json()
-    user_input = data.get("prompt")  # Assuming 'prompt' is the key where the input is sent
-    model = data.get("model", "Aqua")  # Default model is 'Aqua'
-    search_embeddings = data.get("search_embeddings", "no")  # Get the search_embeddings parameter
-    num_predict = data.get("num_predict", 50)
-
-    # Convert model to lowercase for case-insensitive comparison
-    model_lower = model.lower()
-
-    # Determine host IP based on the model (case-insensitive)
-    if model_lower in ["aqua", "gabriel", "alex"]:
-        host_ip = "10.79.85.40"
-    elif model_lower in ["gemma", "gemma2"]:
-        host_ip = "10.79.85.47"
-    else:
-        return jsonify({"error": "Unknown model specified."}), 400
-
-    # Step 1: Embed the user query without storing
-    try:
-        query_embedding = embed_query({"prompt": user_input, "model": model}, host_ip=host_ip, store_in_db=False)
-    except ValueError as e:
-        logging.error(f"Embedding error: {str(e)}")
-        return jsonify({"error": "Failed to embed user input."}), 500
-
-    # Step 2: Search the embedded logs for the closest match only if the checkbox is checked
-    log_response = None
-    if search_embeddings == "yes":
-        log_response = search_embeddings_in_logs(query_embedding, host_ip)
-
-    if log_response:
-        # If a relevant log is found, return the log response
-        return jsonify({"response": f"{model} found relevant logs: {log_response}"}), 200
-    else:
-        # No relevant logs found, proceed with embedding and storing the query
-        logging.debug(f"No relevant logs found, storing the query and embedding")
-        store_embedding_in_db(query_embedding, {"prompt": user_input})
-
-        # Step 3: If no logs match, fallback to normal conversation with the model
-        try:
-            response = send_to_aqua(user_input, model=model, host_ip=host_ip, num_predict=num_predict)
-
-            # Step 4: Analyze conversation for Gemma's intervention
-            if model_lower == "alex" or model_lower == "gabriel":
-                if should_gemma_intervene(user_input, response):
-                    # Let Gemma step in with her contribution
-                    gemma_response = send_to_aqua(
-                        "It seems we could explore this a bit more. Could we think more about this aspect?",
-                        model="Gemma",
-                        host_ip="10.79.85.47",
-                        num_predict=50
-                    )
-                    if gemma_response:
-                        response += f"\n\nGemma: {gemma_response}"
-
-            if response:
-                return jsonify({"response": response}), 200
-            else:
-                return jsonify({"error": f"No response generated from {model}."}), 501
-        except Exception as e:
-            logging.error(f"Failed to generate response from {model}: {str(e)}")
-            return jsonify({"error": "An error occurred processing the request."}), 502
-
-
-def should_gemma_intervene(user_input, model_response):
-    """
-    Determine if Gemma should intervene in the conversation.
-    """
-    # Basic logic to decide if Gemma should intervene
-    if "stuck" in model_response.lower() or "not sure" in model_response.lower():
-        return True
-    if "any other thoughts?" in user_input.lower() or "what else can we do?" in user_input.lower():
-        return True
-    return False
-
-def embed_query(query, host_ip, store_in_db=True):
-    """
-    Sends the query to the embedding API and optionally stores embeddings in the DB.
-    """
-    embed_url = f'http://{host_ip}:11434/api/embed'
-    headers = {'Content-Type': 'application/json'}
-
-    payload = {
-        "model": query.get("model", "Aqua"),
-        "input": query.get("prompt"),
-        "truncate": True
-    }
-
-    try:
-        logging.debug(f"Sending payload to embed URL: {embed_url}")
-        response = requests.post(embed_url, headers=headers, json=payload, timeout=120)
-        
-        if response.status_code == 200:
-            embed_response = response.json()
-            #logging.debug(f"Received response: {embed_response}")
-            
-            if 'embeddings' in embed_response and len(embed_response['embeddings']) > 0:
-                embeddings = np.array(embed_response['embeddings'])
-
-                # Ensure embeddings are 2D
-                embeddings = ensure_2d(embeddings)
-
-                if store_in_db:
-                    # Store in PostgreSQL if store_in_db flag is True
-                    store_embedding_in_db(embeddings, query, host_ip)
-
-                return embeddings
-            else:
-                logging.error(f"No embeddings generated for query: {query}. Response: {embed_response}")
-                raise ValueError("No embeddings generated for the given query.")
-        else:
-            logging.error(f"Embedding query failed with status code {response.status_code}: {response.text}")
-            raise ValueError(f"Embedding query failed with status code {response.status_code}: {response.text}")
-    except requests.RequestException as e:
-        logging.error(f"Error connecting to Embedding API: {str(e)}")
-        raise ValueError(f"Error connecting to Embedding API: {str(e)}")
-
-
-def search_logs(model, query_embedding, brainbed):
-    """
-    Search for relevant log entries based on a query from the saved embedded logs.
-    """
-    embedded_files = []
-
-    # Walk through the specified directory to find embedded log files
-    for root, dirs, files in os.walk(brainbed):
-        for file in files:
-            if file.endswith('.json'):
-                embedded_files.append(os.path.join(root, file))
-
-    logging.debug(f"Found {len(embedded_files)} files to search for query")
-
-    # Loop through the files and look for matching logs
-    best_match = None
-    best_score = -1
-
-    for embedded_file in embedded_files:
-        logging.debug(f"Checking file: {embedded_file}")
-        try:
-            with open(embedded_file, 'r') as f:
-                data = json.load(f)
-
-                if isinstance(data, list):
-                    for entry in data:
-                        if isinstance(entry, dict) and 'embedding' in entry:
-                            stored_embedding = np.array(entry['embedding']).reshape(1, -1)
-
-                            # Calculate cosine similarity between query embedding and stored embedding
-                            if stored_embedding.shape[1] == query_embedding.shape[1]:
-                                score = cosine_similarity(query_embedding, stored_embedding)[0][0]
-                                if score > best_score:
-                                    best_score = score
-                                    best_match = entry
-                else:
-                    logging.warning(f"Unexpected data format in {embedded_file}. Expected a list, but got {type(data)}")
-
-        except json.JSONDecodeError as e:
-            logging.error(f"Failed to decode JSON in {embedded_file}: {e}")
-        except Exception as e:
-            logging.error(f"Error reading or processing {embedded_file}: {str(e)}")
-
-    if best_match:
-        logging.debug(f"Best match found with score {best_score}")
-        return best_match.get('response', 'No detailed response found')
-    else:
-        logging.debug(f"No relevant logs found for query")
-        return None  # Return None explicitly if no match found
-
-def send_to_aqua(prompt, model="Aqua", host_ip="10.79.85.40", template=None, history=None, stream=False, num_predict=50):
-    """
-    Sends a request to the specified model.
-    """
-    url = f'http://{host_ip}:11434/api/generate'
-    headers = {'Content-Type': 'application/json'}
-    data = {
-        "model": model,
-        "prompt": prompt,
-        "template": template,
-        "history": history,
-        "stream": stream,
-        "num_ctx": 32768,
-        "verbose": True,
-        "save": model,
-        "num_predict": num_predict
-    }
-
-    try:
-        # logging.debug(f"Sending request to Aqua API with prompt: {prompt}")
-        response = requests.post(url, headers=headers, json=data, timeout=600)  # Increase timeout if needed
-        if response.status_code == 200:
-            response_data = response.json()
-            return response_data.get('response', 'No response received')
-        else:
-            logging.error(f"Aqua API returned status code: {response.status_code}")
-            return None
-    except requests.RequestException as e:
-        logging.error(f"Error connecting to Aqua API: {str(e)}")
-        return None
-
-
-def save_embedding_locally(embedding, query, directory="local_embeddings"):
-    """
-    Save the embedding and query information to local storage as a JSON file.
-    """
-    # Ensure the directory exists
-    os.makedirs(directory, exist_ok=True)
-
-    # Generate a unique filename for each embedding using timestamp or query hash
-    timestamp = time.strftime('%Y-%m-%d_%H-%M-%S')
-    file_name = f"embedding_{timestamp}.json"
-
-    # Metadata to store along with the embedding
-    metadata = {
-        'timestamp': timestamp,
-        'prompt': query.get('prompt', 'Unknown prompt'),
-        'embedding': embedding.tolist()  # Convert numpy array to list for JSON serialization
-    }
-
-    # File path to save the embedding
-    file_path = os.path.join(directory, file_name)
-
-    # Save the metadata as JSON
-    with open(file_path, 'w') as f:
-        json.dump([metadata], f, indent=4)
-
-    logging.debug(f"Stored embedding locally at {file_path}")
-
-# Modify the store_embedding_in_db method to also save locally
-def store_embedding_in_db(embedding, query, host_ip=None):
-    """
-    Store the embedding vector and query information into PostgreSQL and also save locally.
-    """
-    # Save locally
-    save_embedding_locally(embedding, query)
-
-    # Store in PostgreSQL (if host_ip provided)
-    if host_ip:
-        conn = psycopg2.connect(f"host={host_ip} dbname=chatbotdb user=chatbotuser password=changeme")
-        cursor = conn.cursor()
-
-        logging.debug(f"Embedding shape before storing: {embedding.shape}")
-
-        # Metadata such as timestamp and prompt can be stored for future reference
-        timestamp = time.strftime('%Y-%m-%d %H:%M:%S')
-        prompt = query.get('prompt', 'Unknown prompt')
-
-        # Check the dimensionality of the embedding and store in the appropriate table
-        if embedding.shape[1] == 4096:
-            insert_query = """
-            INSERT INTO embeddings (embedding_vector, timestamp, prompt)
-            VALUES (%s, %s, %s)
-            """
-        elif embedding.shape[1] == 4608:
-            insert_query = """
-            INSERT INTO embeddings_4608 (embedding_vector, timestamp, prompt)
-            VALUES (%s, %s, %s)
-            """
-        else:
-            logging.error(f"Embedding has incorrect dimensions: {embedding.shape}")
-            return
-
-        cursor.execute(insert_query, (embedding.tolist(), timestamp, prompt))
-        conn.commit()
-
-        cursor.close()
-        conn.close()
-
-        logging.debug(f"Stored embedding and query into the database with timestamp {timestamp} and prompt: {prompt}.")
-
-def send_to_generate(prompt, model="Aqua", host_ip="10.79.85.40", template=None, history=None, stream=False, num_predict=50):
-    """
-    Sends a request to the specified model (Aqua or Gemma).
-    """
-    url = f'http://{host_ip}:11434/api/generate'
-    headers = {'Content-Type': 'application/json'}
-    data = {
-        "model": model,
-        "prompt": prompt,
-        "template": template,
-        "history": history,
-        "stream": stream,
-        "num_ctx": 32768,
-        "save": model,
-        "verbose": True,
-        "num_predict": num_predict
-    }
-
-    try:
-        response = requests.post(url, headers=headers, json=data, timeout=600)
-        if response.status_code == 200:
-            response_data = response.json()
-            return response_data.get('response', 'No response received')
-        else:
-            logging.error(f"{model} API returned status code: {response.status_code}")
-            return None
-    except requests.RequestException as e:
-        logging.error(f"Error connecting to {model} API: {str(e)}")
-        return None
-        
-def send_to_chat(prompt, model="Aqua", host_ip="10.79.85.40", template=None, history=None, stream=False, num_predict=50):
-    """
-    Sends a request to the specified model (Aqua or Gemma).
-    """
-    url = f'http://{host_ip}:11434/api/chat'
-    headers = {'Content-Type': 'application/json'}
-    data = {
-        "model": model,
-        "prompt": prompt,
-        "template": template,
-        "history": history,
-        "stream": stream,
-        "save": model,
-        "num_ctx": 32768,
-        "verbose": True,
-        "num_predict": num_predict
-    }
-
-    try:
-        response = requests.post(url, headers=headers, json=data, timeout=600)
-        if response.status_code == 200:
-            response_data = response.json()
-            return response_data.get('response', 'No response received')
-        else:
-            logging.error(f"{model} API returned status code: {response.status_code}")
-            return None
-    except requests.RequestException as e:
-        logging.error(f"Error connecting to {model} API: {str(e)}")
-        return None
-        
-def search_logs(model, query, brainbase):
-    """
-    Search for relevant log entries based on a query from the saved embedded logs.
-    """
-    embedded_files = []
-    
-    # Walk through the response directory to find embedded log files
-    for root, dirs, files in os.walk(brainbase):
-        for file in files:
-            if file.endswith('.json'):
-                embedded_files.append(os.path.join(root, file))
-
-    logging.debug(f"Found {len(embedded_files)} files to search for query")
-
-    # Loop through the files and look for matching logs
-    for embedded_file in embedded_files:
-        logging.debug(f"Checking file: {embedded_file}")
-        try:
-            with open(embedded_file, 'r') as f:
-                data = json.load(f)
-                #logging.debug(f"File {embedded_file} contents loaded. Data: {data}")
-                
-                if isinstance(data, dict):
-                    data = [data]  # Wrap the dictionary in a list to process it as expected
-
-                if isinstance(data, list):
-                    for entry in data:
-                        #logging.debug(f"Processing entry: {entry}")
-                        if isinstance(entry, dict) and 'response' in entry:
-                            response_data = entry['response']
-                            #logging.debug(f"response_data content: {response_data}")
-                            
-                            if isinstance(response_data, dict):
-                                # Log all fields in response_data for clarity
-                                #logging.debug(f"Fields in response_data: {list(response_data.keys())}")
-                                
-                                # Search logic: check for query in 'model'
-                                model_field = response_data.get('model', '')
-                                logging.debug(f"Checking 'model' field in response_data: {model_field}")
-                                
-                                if 'model' in response_data and query.lower() in model_field.lower():
-                                    logging.debug(f"Found matching log in {embedded_file}")
-                                    return entry['response']
-                            else:
-                                logging.warning(f"Expected 'response' field to be a dict, got {type(response_data)} instead. ")
-                        else:
-                            logging.warning(f"Entry in {embedded_file} is not formatted as expected")
-                else:
-                    logging.warning(f"Unexpected data format in {embedded_file}. Expected a list, but got {type(data)}")
-
-        except json.JSONDecodeError as e:
-            logging.error(f"Failed to decode JSON in {embedded_file}: {e}")
-        except Exception as e:
-            logging.error(f"Error reading or processing {embedded_file}: {str(e)}")
-
-    logging.debug(f"No relevant logs found for query")
-    return None  # Return None explicitly if no match found
-
-def ensure_2d(embedding):
-    """
-    Ensures that the embeddings are 2D.
-    """
-    logging.debug(f"Original embedding shape: {embedding.shape}")
-    if len(embedding.shape) == 1:
-        logging.debug("Reshaping 1D array to 2D.")
-        return embedding.reshape(1, -1)
-    elif len(embedding.shape) == 3:
-        logging.debug("Reshaping 3D array to 2D by collapsing.")
-        return embedding.reshape(embedding.shape[0], -1)
-    logging.debug("Embedding already 2D.")
-    return embedding
-    
-def search_embeddings_in_logs(query_embedding, host_ip=None):
-    """
-    Searches for relevant embeddings stored in local storage.
-    """
-    import json
-    import os
-    import numpy as np
-
-    local_dir = "./local_embeddings"
-    embedded_files = [os.path.join(local_dir, file) for file in os.listdir(local_dir) if file.endswith('.json')]
-
-    logging.debug(f"Found {len(embedded_files)} files to search for query")
-
-    best_match = None
-    best_score = -1
-
-    # Ensure query_embedding is 2D
-    query_embedding = np.array(query_embedding).reshape(1, -1)
-
-    for embedded_file in embedded_files:
-        #logging.debug(f"Checking file: {embedded_file}")
-        try:
-            with open(embedded_file, 'r') as f:
-                data = json.load(f)
-
-                # If the data is a list of dictionaries, take the first item
-                if isinstance(data, list) and len(data) > 0 and isinstance(data[0], dict):
-                    data = data[0]
-
-                # Verify if the format matches what we need
-                if not isinstance(data, dict) or 'embedding' not in data:
-                    logging.warning(f"Unexpected data format in {embedded_file}. Expected a dict with 'embedding' key.")
-                    continue
-
-                stored_embedding = np.array(data['embedding']).reshape(1, -1)
-
-                # Calculate similarity between query_embedding and stored_embedding
-                if stored_embedding.shape[1] == query_embedding.shape[1]:
-                    score = cosine_similarity(query_embedding, stored_embedding)[0][0]
-                    if score > best_score:
-                        best_score = score
-                        best_match = data
-
-        except json.JSONDecodeError as e:
-            logging.error(f"Failed to decode JSON in {embedded_file}: {e}")
-        except Exception as e:
-            logging.error(f"Error reading or processing {embedded_file}: {str(e)}")
-
-    if best_match:
-        logging.debug(f"Best match found with score {best_score}")
-        return best_match['prompt']
-    else:
-        logging.debug("No matching embeddings found.")
-        return None
-
-def retrieve_log_by_id(log_id, host_ip):
-    """
-    Retrieve log or prompt by embedding ID from the database.
-    """
-    conn = psycopg2.connect(f"host={host_ip} dbname=chatbotdb user=chatbotuser password=changeme")
-    cursor = conn.cursor()
-    
-    cursor.execute("SELECT prompt FROM embeddings WHERE id = %s", (log_id,))
-    log = cursor.fetchone()
-    
-    cursor.close()
-    conn.close()
-
-    if log:
-        return log[0]  # Return the matched prompt or log
-    return None
-    
-@app.route('/embed', methods=['POST'])
-def embed():
-    data = request.get_json()
-    model = data.get("model", "Alex")
-    input_data = data.get("prompt")  # Adjusted to match the API's expected input key
-    truncate = data.get("truncate", True)
-
-    # Convert model to lowercase for case-insensitive comparison
-    model_lower = model.lower()
-
-    # Determine host IP based on the model (case-insensitive)
-    if model_lower == "aqua" or model_lower == "gabriel" or model_lower == "alex":
-        host_ip = "10.79.85.40"
-    elif model_lower == "gemma" or model_lower == "gemma2":
-        host_ip = "10.79.85.47"
-    else:
-        return jsonify({"error": "Unknown model specified."}), 400
-
-
-    # Construct the API URL using the selected host_ip
-    test_url = f'http://{host_ip}:11434/api/embed'
-    payload = {
-        "model": model,
-        "input": input_data,
-        "truncate": truncate
-    }
-
-    try:
-        response = requests.post(test_url, json=payload, timeout=120)
-
-        if response.status_code == 200:
-            embed_response = response.json()
-
-            if 'embeddings' in embed_response:
-                embeddings = np.array(embed_response['embeddings'])
-                # Ensure 2D format for embeddings
-                embeddings = ensure_2d(embeddings)
-                flask_response = jsonify({"response": embeddings.tolist()})
-            else:
-                flask_response = jsonify({"error": "No embeddings found in response."}), 500
-        else:
-            flask_response = jsonify({"error": "Failed to fetch embedding."}), response.status_code
-
-        flask_response.headers['Content-Type'] = 'application/json'  # Set header for Flask response
-        return flask_response
-
-    except Exception as e:
-        flask_response = jsonify({"error": str(e)})
-        flask_response.headers['Content-Type'] = 'application/json'
-        return flask_response
-
-'''
 
 @app.route('/hostname')
 def hostname():

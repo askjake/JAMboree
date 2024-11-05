@@ -47,7 +47,7 @@ void setup() {
   pinMode(RESET_PIN, OUTPUT);  // Set the RESET_PIN as output
   digitalWrite(RESET_PIN, HIGH); // Set RESET_PIN HIGH initially
 
-  Serial.println("10.9.2024 Jake Montgomery"); // Print identification message
+  Serial.println("11.05.2024 Jake Montgomery (That Was Good)"); // Print identification message
   Serial.flush(); 
 }
 
@@ -70,6 +70,14 @@ void loop() {
 }
 
 void parseInput(String input) {
+  input.trim(); // Remove leading/trailing whitespace
+
+  // Check for 'reset' command
+  if (input == "reset") {
+    resetRemotes();
+    return;
+  }
+
   int remoteNum, buttonNum, delayMs; 
   char action[10];  // To hold the action string (up/down)
   byte keyCmdDown, keyCmdUp;
@@ -78,9 +86,26 @@ void parseInput(String input) {
   if (sscanf(input.c_str(), "%d %hhx %hhx %d", &remoteNum, &keyCmdDown, &keyCmdUp, &delayMs) == 4) {
     int interruptPin = convertNumToPin(remoteNum); // Convert remote number to pin number
     if (interruptPin >= 0) {
-      triggerKeyCmd(interruptPin, keyCmdDown); // Trigger KEY_CMD_DOWN
+      // Send KEY_CMD_DOWN and wait for acknowledgment
+      if (!sendKeyCmdAndWaitForAck(interruptPin, keyCmdDown, ackTimeout)) {
+        releaseAllButtons(remoteNum);
+        return;
+      }
+
       delay(delayMs); // Wait for the specified delay
-      triggerKeyCmd(interruptPin, keyCmdUp); // Trigger KEY_CMD_UP
+
+      // Send KEY_CMD_UP and wait for acknowledgment
+      if (!sendKeyCmdAndWaitForAck(interruptPin, keyCmdUp, ackTimeout)) {
+        releaseAllButtons(remoteNum);
+        return;
+      }
+
+      // Send KEY_CMD_UP again for reliability
+      if (!sendKeyCmdAndWaitForAck(interruptPin, keyCmdUp, ackTimeout)) {
+        releaseAllButtons(remoteNum);
+        return;
+      }
+
       Serial.print(remoteNum); // Print the remote number
       Serial.flush(); 
       delay(5);
@@ -105,18 +130,11 @@ void parseInput(String input) {
 
       int interruptPin = convertNumToPin(remoteNum); // Convert remote number to pin number
       if (interruptPin >= 0 && buttonNum > 0 && buttonNum <= 40) {
-        triggerKeyCmd(interruptPin, KEY_CMD);
-        
-        // Wait for acknowledgment after triggering the key command
-        unsigned long startTime = millis();
-        //while (!ackReceived) {
-          if (millis() - startTime > ackTimeout) {
-            Serial.println("Timeout waiting for acknowledgment");
-            Serial.flush();
-            releaseAllButtons(remoteNum);
-            //break; // Timeout: proceed even if acknowledgment wasn't received
-          }
-      //}
+        // Send KEY_CMD and wait for acknowledgment
+        if (!sendKeyCmdAndWaitForAck(interruptPin, KEY_CMD, ackTimeout)) {
+          releaseAllButtons(remoteNum);
+          return;
+        }
       } else {
         Serial.println("Invalid remote number or button number " + String(remoteNum)); // Debug print
         Serial.flush();
@@ -128,21 +146,31 @@ void parseInput(String input) {
   }
 }
 
+// Function to send key command and wait for acknowledgment
+bool sendKeyCmdAndWaitForAck(int interruptPin, byte keyCmd, unsigned long timeout) {
+  ackReceived = false; // Reset ackReceived flag
+  triggerKeyCmd(interruptPin, keyCmd);
+
+  // Wait for acknowledgment after triggering the key command
+  unsigned long startTime = millis();
+  while (!ackReceived) {
+    if (millis() - startTime > timeout) {
+      Serial.println("Timeout waiting for acknowledgment");
+      Serial.flush();
+      return false;
+    }
+  }
+  return true;
+}
+
 void releaseAllButtons(int remoteNum) {
   for (int i = 1; i <= 1; i++) {
     KEY_CMD = strtol(buttonActions[i - 1][1], NULL, 16); // "up" action for each button
     int pin = convertNumToPin(remoteNum);
     if (pin >= 0) {
-      triggerKeyCmd(pin, KEY_CMD);
-
-      // Wait for acknowledgment after triggering each key command
-      unsigned long startTime = millis();
-      while (!ackReceived) {
-        if (millis() - startTime > ackTimeout) {
-          Serial.println("Timeout waiting for acknowledgment");
-          Serial.flush();
-          break; // Timeout: proceed even if acknowledgment wasn't received
-        }
+      // Send KEY_CMD and wait for acknowledgment
+      if (!sendKeyCmdAndWaitForAck(pin, KEY_CMD, ackTimeout)) {
+        break; // Timeout: proceed even if acknowledgment wasn't received
       }
     }
   }
@@ -154,7 +182,7 @@ void requestEvent() {
     Wire.write(BLANK); // Write BLANK to clear interrupt
     clearInterruptFlag = false; // Reset the flag after clearing the interrupt
   } else {
-    //Wire.write(CFG_REG); // Regular behavior - write CFG_REG
+    //Wire.write(CFG_REG); 
     Wire.write(0xAF);
   }
   Wire.write(INT_REG); // Write interrupt register
@@ -189,7 +217,7 @@ void triggerKeyCmd(int pin, byte keyCmd) {
 }
 
 // I2C receive event handler
-void receiveEvent(int pin) {
+void receiveEvent(int howMany) {
   byte byteCount = 0;
   byte byteCursor = 0;
   byte receivedValues[45]; // Array to store received values
@@ -199,7 +227,7 @@ void receiveEvent(int pin) {
   receivedValue = 0;
   
   // Read all available bytes from the I2C buffer
-  while (0 < Wire.available()) {
+  while (Wire.available()) {
     byteRead = Wire.read(); // Read a byte from the buffer
     if (byteCount == 0) {
       readMode = byteRead; // Set readMode to the first byte

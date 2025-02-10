@@ -32,6 +32,8 @@ from debug_gui import *
 import logging 
 import ast
 from PIL import Image, ImageTk
+from pathlib import Path
+
 
 # Set up logging
 logging.basicConfig(filename='debugJam.log', level=logging.DEBUG)
@@ -489,14 +491,14 @@ class JAMboree_gui(tk.Tk):
         else:
             self.geometry(self.full_geometry)  # Reset to full geometry
 
-    def send_reset_and_sat(self):
+    def send_reset_and_sat(self, com_port):
         self.rf_remote(com_port, '1', 'reset', 80)
         for remote in range(1, 16):
             self.rf_remote(str(remote), 'sat', 80)
         print("Sent reset and SAT to all remotes")
     
     def schedule_reset_and_sat(self):
-        self.send_reset_and_sat()
+        self.send_reset_and_sat(com_port)
         self.scheduler.enter(600, 1, self.schedule_reset_and_sat)
         
     def ensure_ssh_connection(self, linux_pc):    
@@ -1428,26 +1430,47 @@ class JAMboree_gui(tk.Tk):
             try:
                 command = f"{button_codes['KEY_CMD']} {button_codes['KEY_RELEASE']}" if button_id != 'reset' else "reset"
                 message = f"{remote} {command} {delay}\n".encode('utf-8')
-                self.serial_connection.write(message)
-                self.serial_connection.flush()
-                time.sleep((delay + 30) / 1000.0)
-                response_bytes = self.serial_connection.read_all()
-                logging.debug(f"Raw bytes received from serial port: {response_bytes}")
+                attempt = 0
+                max_attempts = 2  # Original attempt + one retry after reset
 
-                # Attempt to decode the response
-                try:
-                    response = response_bytes.decode('utf-8').strip()
-                except UnicodeDecodeError as e_utf8:
-                    logging.warning(f"UTF-8 decoding failed: {e_utf8}. Trying 'latin-1'.")
+                while attempt < max_attempts:
+                    self.serial_connection.write(message)
+                    self.serial_connection.flush()
+                    time.sleep((delay + 50) / 1000.0)
+                    response_bytes = self.serial_connection.read_all()
+                    logging.debug(f"Raw bytes received from serial port: {response_bytes}")
+
+                    # Attempt to decode the response
                     try:
-                        response = response_bytes.decode('latin-1').strip()
-                    except UnicodeDecodeError as e_latin1:
-                        logging.error(f"'latin-1' decoding failed: {e_latin1}. Displaying raw hex.")
-                        response = ' '.join(f'{b:02X}' for b in response_bytes)
+                        response = response_bytes.decode('utf-8').strip()
+                    except UnicodeDecodeError as e_utf8:
+                        logging.warning(f"UTF-8 decoding failed: {e_utf8}. Trying 'latin-1'.")
+                        try:
+                            response = response_bytes.decode('latin-1').strip()
+                        except UnicodeDecodeError as e_latin1:
+                            logging.error(f"'latin-1' decoding failed: {e_latin1}. Displaying raw hex.")
+                            response = ' '.join(f'{b:02X}' for b in response_bytes)
 
-                logging.debug(f"RF command response: {response}")
-                self.output_text.insert(tk.END, f"{response}\n")
-                self.output_text.see(tk.END)
+                    logging.debug(f"RF command response: {response}")
+                    self.output_text.insert(tk.END, f"{response}\n")
+                    self.output_text.see(tk.END)
+
+                    if "Timeout waiting for acknowledgment" in response:
+                        logging.warning("Timeout detected, sending reset command and retrying.")
+                        # Send 'reset\n' to the serial connection
+                        reset_message = 'reset\n'.encode('utf-8')
+                        #reset_message = 'reset'
+                        self.serial_connection.write(reset_message)
+                        self.serial_connection.flush()
+                        time.sleep(5)  # Wait briefly after reset
+                        attempt += 1  # Increment attempt count to retry the original message
+                    else:
+                        break  # Exit loop if no timeout
+
+                else:
+                    logging.error("Command failed after retrying with reset.")
+                    return f"Failed to send RF command after reset.", 500
+
             except serial.SerialException as e:
                 logging.error(f"Failed to send RF command: {str(e)}")
                 self.output_text.insert(tk.END, f"Failed to send RF command: {str(e)}\n")
@@ -2047,7 +2070,7 @@ def retry_with_linux_pcs(offending_method, *args, **kwargs):
 
 
 @app.route('/54/<remote>/<button_id>', methods=['GET', 'POST'], strict_slashes=False)
-def handle_54_remote_defaultdelay(remote, button_id):
+def handle_54_remote_defaultdelay(com_port, remote, button_id):
     # Call the instance method from the Flask app
     response = app.config['controller'].rf_remote(com_port, remote, button_id, "80")
     return jsonify({'0response': response})
@@ -2250,6 +2273,7 @@ def upload_local_software():
             return jsonify({'error': 'No selected file'}), 400
 
         # Save the file to local_apps directory
+        apps_dir = f'/home/{username}/stbmnt/apps'
         local_apps = os.path.join(apps_dir, file.filename)
         file.save(local_apps)
         
@@ -2317,6 +2341,7 @@ def jam_software_internal(data):
             return {'error': 'Software or STB not selected'}, 400
 
         # Refactored logic to handle software JAMming after upload
+        apps_dir = f'/home/{username}/stbmnt/apps'
         local_apps = os.path.join(apps_dir, selected_file)
         
         with open(config_file, 'r') as file:
@@ -2417,6 +2442,7 @@ def jam_software(stb_name=None, software=None):
 
         # Construct the CC Share path using the update_dir and the software filename
         cc_share = f"/ccshare/linux/c_files/{selected_dir}/{selected_file}"
+        apps_dir = f'/home/{username}/stbmnt/apps'
         local_apps = os.path.join(apps_dir, selected_file)
         linux_pc_dir = f'/home/{username}/stbmnt/apps'
         linux_pc_app = os.path.join(linux_pc_dir, selected_file).replace("\\", "/")
@@ -2462,79 +2488,22 @@ def jam_software(stb_name=None, software=None):
         ssh.close()
         logging.info(f"Software {selected_file} loaded successfully onto {linux_pc}.")
         
-        run_commands_over_ssh(linux_pc, username, password, stb_ip, selected_file)
+        result = run_commands_over_ssh(linux_pc, username, password, stb_ip, selected_file)
 
-        return jsonify({'status': 'Software successfully JAMmed'})
+        # Now 'result' is a dict, e.g. {'status': 'update complete'} or
+        # {'status': 'no update complete detected'} or an error string
+        if result.get('status', '').lower() == 'update complete':
+            return jsonify({'status': 'Update Complete! Software successfully JAMmed!'}), 200
+        elif result.get('status', '').startswith('error:'):
+            return jsonify({'error': result['status']}), 500
+        else:
+            # Maybe it didn't see "Update Complete"
+            return jsonify({'status': 'Software loaded, but no update complete detected'}), 200
 
     except Exception as e:
         logging.error(f"Error during software load: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-def run_commands_over_ssh(linux_pc, username, password, stb_ip, app):
-    logging.debug("Starting run_commands_over_ssh function.")
-    logging.debug(f"Parameters received - Linux PC: {linux_pc}, Username: {username}, STB IP: {stb_ip}, App: {app}")
-
-    try:
-        logging.info(f"Attempting to SSH into {linux_pc}.")
-        ssh = paramiko.SSHClient()
-        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        ssh.connect(linux_pc, username=username, password=password)
-        logging.info(f"SSH connection established with {linux_pc}.")
-
-        linux_pc_stbmnt = f'/home/{username}/stbmnt'
-        tnet_remote_path = f"{linux_pc_stbmnt}/tnet.jam"
-        tnet_local = 'tnet.jam'
-
-        logging.debug(f"Remote tnet.jam path: {tnet_remote_path}, Local tnet.jam path: {tnet_local}")
-
-        # Using SFTP to check and upload the tnet.jam file
-        sftp = ssh.open_sftp()
-
-        try:
-            logging.info(f"Uploading tnet.jam to {linux_pc}:{tnet_remote_path}.")
-            sftp.put(tnet_local, tnet_remote_path)
-            logging.debug(f"tnet.jam uploaded successfully to {tnet_remote_path}.")
-            print(f"tnet.jam uploaded successfully to {tnet_remote_path}.")
-        except FileNotFoundError:
-            logging.error(f"tnet.jam not found locally or unable to upload to {tnet_remote_path}.")
-            raise
-
-        sftp.close()
-
-        # Command to be executed on the remote Linux PC
-        command = f"expect {tnet_remote_path} {stb_ip} apps {app}"
-        logging.info(f"Running command on {linux_pc}: {command}")
-
-        stdin, stdout, stderr = ssh.exec_command(command)
-
-        output = stdout.read().decode()
-        error = stderr.read().decode()
-
-        if output:
-            logging.info(f"Output from tnet command:\n{output}")
-            print(f"Output from tnet command:\n{output}")
-            
-            # Check if recovery is required
-            if "please put your box in boot recovery" in output.lower():
-                logging.info("Boot recovery is required. Initiating boot recovery...")
-                boot_recovery(linux_pc, username, password, stb_ip)
-                logging.info("Re-running run_commands_over_ssh after boot recovery...")
-                time.sleep(30)
-                run_commands_over_ssh(linux_pc, username, password, stb_ip, app)  # Re-run the command after recovery
-                return
-
-        if error:
-            logging.error(f"Error from tnet command:\n{error}")
-            print(f"Error from tnet command:\n{error}")
-
-        ssh.close()
-        logging.info("SSH connection closed.")
-
-    except Exception as e:
-        logging.error(f"Failed to execute commands over SSH: {e}")
-    finally:
-        logging.info("Stopping any music playback.")
-        pygame.mixer.music.stop()
 
 # Set up logging to file
 logging.basicConfig(
@@ -2550,24 +2519,128 @@ log_output = ""  # Global variable to hold the tnet.jam output
 @app.route('/api/load_app', methods=['POST'])
 @app.route('/api/load_app/<stb_name>/<app>', methods=['GET'])
 def load_app(stb_name=None, app=None):
-    global log_output  # Use the global log_output variable
     logging.debug("Received request to load app.")
     
-    # Existing code to handle loading an app goes here...
+    # Check if it's a GET request with URL parameters or POST request with JSON/form-data
+    if request.method == 'GET' and stb_name and app:
+        selected_stb = stb_name
+        selected_file = app
+    else:
+        if request.is_json:  # Handle JSON request (external API call)
+            data = request.json
+            selected_file = data.get('app')
+            selected_stb = data.get('stb')
+        else:  # Handle form-data (internal API call)
+            selected_file = request.form.get('app')
+            selected_stb = request.form.get('stb')
 
-    # After successfully loading the app, run commands over SSH
+    logging.debug(f"Selected app: {selected_file}, Selected STB: {selected_stb}")
+
+    if not selected_file or not selected_stb:
+        logging.error("App or STB not selected.")
+        return jsonify({'error': 'App or STB not selected'}), 400
+
+    local_apps = os.path.join(apps_dir, selected_file)
+
     try:
+        # Load configuration
+        with open(config_file, 'r') as file:
+            config_data = json.load(file)
+            stbs = config_data.get('stbs', {})
+            stb_info = stbs.get(selected_stb)
+            if not stb_info:
+                logging.error(f"STB {selected_stb} not found in configuration.")
+                return jsonify({'error': f"STB {selected_stb} not found in configuration"}), 404
+
+            stb_ip = stb_info.get('ip')
+            linux_pc = stb_info.get('linux_pc')
+            logging.debug(f"STB IP: {stb_ip}, Linux PC: {linux_pc}")
+
+            if not stb_ip:
+                logging.error(f"Failed to find IP for STB: {selected_stb}")
+                return jsonify({'error': f"Failed to find IP for STB: {selected_stb}"}), 404
+
+        # Load credentials
+        credentials = load_credentials()
+        username = credentials.get('username')
+        password = credentials.get('password')
+        linux_pc = credentials.get('linux_pc')
+        logging.debug(f"Loaded credentials for user: {username}")
+
+        # Establish SSH connection
+        ssh = paramiko.SSHClient()
+        ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        ssh.connect(linux_pc, username=username, password=password)
+        sftp = ssh.open_sftp()
+        logging.info(f"Connected to Linux PC: {linux_pc}")
+
+        # Safely process the selected file name
+        if ' - ' in selected_file:
+            app_filename = selected_file.split(' - ')[1]
+        else:
+            app_filename = selected_file
+            logging.warning(f"Unexpected file format for selected_file: {selected_file}. Using full string as app filename.")
+
+        cc_share = f"/ccshare/linux/c_files/signed-browser-applications/internal/{app_filename}"
+        apps_dir = f'/home/{username}/stbmnt/apps'
+        local_apps = os.path.join(apps_dir, app_filename)
+        linux_pc_dir = f'/home/{username}/stbmnt/apps'
+        linux_pc_app = os.path.join(linux_pc_dir, selected_file).replace("\\", "/")
+
+        logging.debug(f"App filename: {app_filename},\n CC Share Path: {cc_share},\n Local Apps Path: {local_apps},\n Linux PC App Path: {linux_pc_app}")
+
+        # Ensure the local apps directory exists
+        if not os.path.exists(apps_dir):
+            os.makedirs(apps_dir)
+            logging.info(f"Created local apps directory: {apps_dir}")
+
+        # Download the app if not already available locally
+        if not os.path.exists(local_apps):
+            logging.info(f"Downloading {app_filename} from CC Share.")
+            sftp.get(cc_share, local_apps)
+        else:
+            logging.info(f"{app_filename} already exists locally, skipping download.")
+
+        # Ensure the Linux PC directory exists
+        try:
+            sftp.chdir(linux_pc_dir)
+            logging.info(f"Changed to Linux PC directory: {linux_pc_dir}")
+        except IOError:
+            logging.info(f"Creating directory on Linux PC: {linux_pc_dir}")
+            ssh.exec_command(f"mkdir -p {linux_pc_dir}")
+
+        # Upload the app to the Linux PC if it does not already exist there
+        try:
+            sftp.stat(linux_pc_app)
+            logging.info(f"App already exists on Linux PC: {linux_pc_app}")
+        except FileNotFoundError:
+            logging.info(f"Uploading {app_filename} to Linux PC.")
+            sftp.put(local_apps, linux_pc_app)
+
+        sftp.close()
+        ssh.close()
+        logging.info(f"App {app_filename} loaded successfully onto {linux_pc}.")
+        
         run_commands_over_ssh(linux_pc, username, password, stb_ip, app)
         return jsonify({'status': 'App successfully prepared'}), 200
     except Exception as e:
         logging.error(f"Error during app load: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
+
+
 def run_commands_over_ssh(linux_pc, username, password, stb_ip, app):
-    global log_output
+    """
+    Runs an 'expect' command over SSH and reads stdout line by line until it
+    detects "Update Complete" or the command finishes. Returns a dict:
+      {'status': 'update complete'} if found,
+      {'status': 'no update complete detected'} otherwise.
+    """
+
     logging.debug("Starting run_commands_over_ssh function.")
     logging.debug(f"Parameters received - Linux PC: {linux_pc}, Username: {username}, STB IP: {stb_ip}, App: {app}")
 
+    ssh = None
     try:
         logging.info(f"Attempting to SSH into {linux_pc}.")
         ssh = paramiko.SSHClient()
@@ -2575,41 +2648,88 @@ def run_commands_over_ssh(linux_pc, username, password, stb_ip, app):
         ssh.connect(linux_pc, username=username, password=password)
         logging.info(f"SSH connection established with {linux_pc}.")
 
+        # Paths
         linux_pc_stbmnt = f'/home/{username}/stbmnt'
         tnet_remote_path = f"{linux_pc_stbmnt}/tnet.jam"
+        tnet_local = 'tnet.jam'
+        logging.debug(f"Remote tnet.jam path: {tnet_remote_path}, Local tnet.jam path: {tnet_local}")
 
-        # Using SFTP to upload the tnet.jam file
+        # 1. SFTP upload
         sftp = ssh.open_sftp()
-        sftp.put('tnet.jam', tnet_remote_path)
-        logging.debug(f"tnet.jam uploaded successfully to {tnet_remote_path}.")
+        try:
+            logging.info(f"Uploading tnet.jam to {linux_pc}:{tnet_remote_path}.")
+            sftp.put(tnet_local, tnet_remote_path)
+            logging.debug(f"tnet.jam uploaded successfully to {tnet_remote_path}.")
+            print(f"tnet.jam uploaded successfully to {tnet_remote_path}.")
+        except FileNotFoundError:
+            logging.error(f"tnet.jam not found locally or unable to upload to {tnet_remote_path}.")
+            raise
         sftp.close()
 
-        # Command to be executed on the remote Linux PC
+        # 2. Construct and run the command
         command = f"expect {tnet_remote_path} {stb_ip} apps {app}"
         logging.info(f"Running command on {linux_pc}: {command}")
 
-        stdin, stdout, stderr = ssh.exec_command(command)
+        # Possibly use get_pty=True for interactive commands
+        stdin, stdout, stderr = ssh.exec_command(command, get_pty=True)
 
-        # Capture the output in real-time and store it in the global log_output variable
-        def capture_output(stream):
-            global log_output
-            for line in iter(stream.readline, ""):
-                logging.info(f"Output from tnet command: {line.strip()}")
-                log_output += line.strip() + "\n"
+        found_update_complete = False
 
-        # Use threading to read stdout and stderr concurrently
-        stdout_thread = threading.Thread(target=capture_output, args=(stdout,))
-        stderr_thread = threading.Thread(target=capture_output, args=(stderr,))
-        stdout_thread.start()
-        stderr_thread.start()
-        stdout_thread.join()
-        stderr_thread.join()
+        # read line by line until command finishes or we see 'Update Complete'
+        while not stdout.channel.exit_status_ready():
+            line = stdout.readline()
+            if not line:
+                time.sleep(0.1)
+                continue
 
-        ssh.close()
-        logging.info("SSH connection closed.")
+            line_stripped = line.strip()
+            logging.info(f"[STDOUT] {line_stripped}")
+
+            # Check for 'Update Complete'
+            if re.search(r'update complete', line_stripped, re.IGNORECASE):
+                logging.info("Detected 'Update Complete' in the command output.")
+                found_update_complete = True
+                return {'status': 'Update Complete'}
+
+            # Check for 'boot recovery'
+            if re.search(r'please put your box in boot recovery', line_stripped, re.IGNORECASE):
+                logging.info("Detected 'please put your box in boot recovery'. Initiating boot recovery...")
+                boot_recovery(linux_pc, username, password, stb_ip, tnet_remote_path)
+                logging.info("Sleeping 60 seconds then re-running run_commands_over_ssh...")
+                time.sleep(90)
+                # Re-run after recovery
+                ssh.close()
+                return run_commands_over_ssh(linux_pc, username, password, stb_ip, app)
+
+        # Drain remaining output
+        remaining = stdout.read().decode(errors='ignore').strip()
+        if remaining:
+            logging.info(f"[STDOUT-REMAINING] {remaining}")
+            if re.search(r'update complete', remaining, re.IGNORECASE):
+                found_update_complete = True
+
+        # Check stderr
+        err_output = stderr.read().decode(errors='ignore').strip()
+        if err_output:
+            logging.error(f"[STDERR] {err_output}")
+
+        if found_update_complete:
+            logging.info("Update Complete recognized. Returning success.")
+            return {'status': 'Update Complete'}
+
+        logging.info("SSH command execution complete (no 'Update Complete' found).")
+        return {'status': 'no update complete detected'}
 
     except Exception as e:
         logging.error(f"Failed to execute commands over SSH: {e}")
+        return {'status': f'error: {e}'}
+
+    finally:
+        if ssh:
+            ssh.close()
+            logging.info("SSH connection closed.")
+        logging.info("Stopping any music playback (pygame).")
+        pygame.mixer.music.stop()  # remove if not needed
 
 # Endpoint to retrieve the log output for the webpage
 @app.route('/get_log_output', methods=['GET'])
@@ -2619,7 +2739,7 @@ def get_log_output():
 
 
 
-def boot_recovery(linux_pc, username, password, stb_ip):
+def boot_recovery(linux_pc, username, password, stb_ip, tnet_remote_path):
     logging.debug("Starting boot_recovery function.")
     try:
         logging.info(f"Attempting to SSH into {linux_pc} for boot recovery.")
@@ -2653,17 +2773,183 @@ def boot_recovery(linux_pc, username, password, stb_ip):
     except Exception as e:
         logging.error(f"Failed to initiate boot recovery: {e}")
         
+# 1) Find the directory containing this file
+BASE_DIR = Path(__file__).resolve().parent
+
+# 2) Define the relative filenames you want to track
+RELATIVE_FILES = [
+    "commands.py",
+    "get_stb_list.py",
+    "JAMboree.py",
+    os.path.join("templates", "JAMboRemote.html"),
+    os.path.join("templates", "dayJAM.html"),
+]
+
+# 3) Convert them to absolute paths
+FILES_TO_TRACK = [str(BASE_DIR / f) for f in RELATIVE_FILES]
+
+def get_db_connection():
+    import json
+    from pathlib import Path
+
+    base_dir = Path(__file__).resolve().parent
+    cred_file = base_dir / "credentials.txt"
+
+    if not cred_file.exists():
+        raise FileNotFoundError(f"Could not find 'credentials.txt' in {base_dir}.")
+    with open(cred_file, "r") as f:
+        creds = json.load(f)
+
+    required = ["db_host", "db_name", "db_username", "db_password"]
+    for key in required:
+        if key not in creds:
+            raise KeyError(f"Missing '{key}' in credentials.txt.")
+
+    conn = psycopg2.connect(
+        dbname=creds["db_name"],
+        user=creds["db_username"],
+        password=creds["db_password"],
+        host=creds["db_host"]
+    )
+    return conn
+
+def calculate_md5(file_path):
+    """Calculate MD5 of a file in binary mode."""
+    import hashlib
+    hasher = hashlib.md5()
+    with open(file_path, "rb") as f:
+        for chunk in iter(lambda: f.read(4096), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()
 
 
-@app.route('/hostname')
-def hostname():
-    return jsonify(hostname=socket.gethostname())
-        
-def get_linux_pc_from_config(stbs):
-    with open(config_file, 'r') as file:
-        config_data = json.load(file)
-    linux_pc = next(iter(config_data['stbs'].values()))['linux_pc']  # Fetch any linux_pc from the config
-    return linux_pc
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SCRIPT_DIR = r"C:\Users\studio\Documents\JAMboree"
+SCRIPT_PATH = os.path.join(SCRIPT_DIR, "versionControl.py")
+VERSION_CONTROL_SCRIPT = os.path.join(BASE_DIR, "versionControl.py")
+
+def run_version_control():
+
+    if not os.path.exists(VERSION_CONTROL_SCRIPT):
+        return {
+            "success": False,
+            "error": f"File not found: {VERSION_CONTROL_SCRIPT}",
+        }
+
+    try:
+        # Use sys.executable so we call the same Python environment
+        result = subprocess.run(
+            [sys.executable, VERSION_CONTROL_SCRIPT],
+            capture_output=True,
+            text=True,
+            cwd=os.path.dirname(VERSION_CONTROL_SCRIPT),  # Run in that dir
+            encoding="utf-8",
+            errors="replace",  # replace invalid chars
+            check=False  # don't raise CalledProcessError automatically
+        )
+
+        # Check return code
+        if result.returncode != 0:
+            return {
+                "success": False,
+                "error": f"Script exited with code {result.returncode}",
+                "stderr": result.stderr,
+                "raw_output": result.stdout,
+            }
+
+        # Parse lines
+        version_data = []
+        for line in result.stdout.splitlines():
+            line = line.strip()
+            if line.startswith("- v."):  # example: "- v.4 : 5   ⚠️ SomeFile..."
+                # Example line: "- v.4 : 5   ⚠️ Using older version   commands.py"
+                # We'll parse in 2 steps:
+                # 1) parts[0] = '- v.4 : 5'
+                # 2) The rest might have '⚠️ Using older version' or 'Up to date' or ...
+                # 3) Then the file name.
+                # Let's do a quick split approach:
+
+                # Split at two spaces or some delimiter (this is flexible if your real lines differ)
+                # We'll do simpler: let's separate left side from right side on two spaces
+                splitted = line.split("  ", 1)  # first part (version info), second part (status + file)
+                left_side = splitted[0].replace("- v.", "").strip()  # e.g. "4 : 5"
+                right_side = splitted[1].strip() if len(splitted) > 1 else ""
+
+                # left_side might be "4 : 5"
+                # we'll parse in_use_version = 4, latest_version = 5
+                in_use, latest = left_side.split(":", 1)
+                in_use_version = in_use.strip()
+                latest_version = latest.strip()
+
+                # For the right_side, we guess if it has a status or not
+                # e.g. "⚠️ Using older version   commands.py" or "Up to date   commands.py"
+                # We'll do a second .split on double spaces, or just find last chunk as file
+                status_part = ""
+                file_part = ""
+                # We'll do a final approach: the last word is the file name (or more).
+                # That might not be robust if the file name can have spaces, but let's see:
+                # If the file name can have spaces, we might need a more advanced parse.
+                # We'll assume the file name is everything after the last group of spaces.
+
+                # Attempt:
+                right_tokens = right_side.rsplit(" ", 1)
+                if len(right_tokens) == 2:
+                    # last chunk is the file, first chunk is the status
+                    status_part = right_tokens[0].strip()
+                    file_part = right_tokens[1].strip()
+                else:
+                    # fallback
+                    file_part = right_side
+
+                # Distinguish if status_part has "Up to date" or "⚠️ Using older version"
+                # If it doesn't have those, we can guess "New version" or something
+                if "Up to date" in status_part:
+                    status = "Up to date"
+                elif "⚠️" in status_part or "older" in status_part:
+                    status = "⚠️ Using older version"
+                else:
+                    status = "Unknown or new"
+
+                version_data.append({
+                    "file": file_part,
+                    "version_in_use": in_use_version,
+                    "latest_version": latest_version,
+                    "status": status
+                })
+
+        if not version_data:
+            return {
+                "success": False,
+                "error": "No version data parsed from script output.",
+                "raw_output": result.stdout
+            }
+
+        return {"success": True, "version_data": version_data}
+
+    except Exception as e:
+        return {
+            "success": False,
+            "error": f"Failed to run version control script: {e}",
+        }
+
+@app.route("/api/version-control", methods=["GET"])
+def api_version_control():
+    """
+    Flask endpoint that returns the version control data in JSON.
+    """
+    data = run_version_control()
+    if not data["success"]:
+        return jsonify({
+            "success": False,
+            "error": data.get("error", "Unknown error"),
+            "raw_output": data.get("raw_output", ""),
+        }), 500
+
+    return jsonify({
+        "success": True,
+        "version_data": data["version_data"]
+    })
+
 
 
 fetcher = JAMboree_gui()

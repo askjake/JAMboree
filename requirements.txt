@@ -22,3 +22,7 @@ xmltodict
 netifaces
 tkinterdnd2
 pygame
+logparser3
+drain3
+numpy
+psycopg2

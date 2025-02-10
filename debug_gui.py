@@ -297,11 +297,11 @@ class DebugGUI(tk.Toplevel):
         self.find_btn.grid(row=4, column=0, padx=5, pady=5)
         ToolTip(self.find_btn, "Activly searches the networks for Unsecure settops and saves them for later.")
 
-        #self.uploadable_files_btn = ttk.Button(self.request_frame, text="Get Files", command=self.uploadable_files, style='TButton')
-        #self.uploadable_files_btn.grid(row=4, column=0, padx=5, pady=5)
+        self.uploadable_files_btn = ttk.Button(self.request_frame, text="Get Files", command=self.uploadable_files, style='TButton')
+        self.uploadable_files_btn.grid(row=4, column=0, padx=5, pady=5)
 
-        #self.uploadable_file_groups_btn = ttk.Button(self.request_frame, text="Get Groups", command=self.uploadable_file_groups, style='TButton')
-        #self.uploadable_file_groups_btn.grid(row=4, column=1, padx=5, pady=5)
+        self.uploadable_file_groups_btn = ttk.Button(self.request_frame, text="Get Groups", command=self.uploadable_file_groups, style='TButton')
+        self.uploadable_file_groups_btn.grid(row=4, column=1, padx=5, pady=5)
 
         self.unpair_btn = ttk.Button(self.request_frame, text='Unpair', command=self.master.unpair_function)
         self.unpair_btn.grid(row=5, column=0, padx=5, pady=5)

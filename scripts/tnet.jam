@@ -1,0 +1,122 @@
+#!/usr/bin/expect
+
+################################################################################
+# Expect script to telnet to a given IP address and execute commands.
+# 
+################################################################################
+
+# Variables and configuration
+set tnet_version "1.25"
+set nfs_top_dir "/home/$env(USER)/stbmnt/"
+set timeout 2
+set prompt "~ #"
+
+# Argument handling
+if {$argc > 4 || $argc < 2} {
+ puts "Usage: tnet <ip address> <mount_point> [software] [mount NAND:0-no,1-yes]"
+ puts "Ex: tnet 192.168.1.104 ZIP1018"
+ puts "Ex: tnet 192.168.1.104 Wally \"kill -USR2 1\""
+ puts "Ex: tnet 192.168.1.104 Wally \"kill -USR2 1\" 1" 
+ exit
+}
+
+# Parse the command-line arguments
+set ip [lindex $argv 0]
+set stb_dir [lindex $argv 1]
+set software [lindex $argv 2]
+set mount_NAND [lindex $argv 3]
+
+# IP determination
+set ip_route_output [exec ip route get $ip]
+set ip_address [regexp -inline {src (\S+)} $ip_route_output]
+if {[llength $ip_address] == 0} {
+    puts "Could not determine the IP address related to the provided STB IP address."
+    exit 1
+} else {
+    set ip_address [lindex $ip_address 1]
+}
+puts "Using IP address $ip_address for the NFS mount."
+
+# NFS mount and unmount commands
+set mount_opts   "-o soft,nolock,tcp,rsize=1024,wsize=1024 "
+set unmount_cmd  "umount -l /usr/local /var/mnt/drivers \r"
+set mount_cmd    "mount $mount_opts $ip_address:$nfs_top_dir$stb_dir /mnt/mine \r"
+set export_cmd   "export LD_LIBRARY_PATH=/usr/local/lib:\$LD_LIBRARY_PATH\r cd /mnt/mine/ \r ls -l \r"
+
+# Correct the expression using proper Tcl syntax
+set corrupt_cmd "\r\r dd if=/dev/mtd1 of=/tmp/mtd1_start bs=1 count=129576 && dd if=/dev/zero of=/tmp/zero bs=1 count=388 && dd if=/dev/mtd1 of=/tmp/mtd1_end bs=1 skip=129964 && cat /tmp/mtd1_start /tmp/zero /tmp/mtd1_end > /tmp/mtd1_new && flash_unlock -u /dev/mtd1 && flashcp -v /tmp/mtd1_new /dev/mtd1 \r"
+
+# Telnet into the STB
+for {set x 0} {$x<120} {incr x} {
+    spawn telnet $ip
+    expect {
+        timeout {puts "Try Again..."; continue;}
+        "login:" {send "root\r"; break;}
+    }
+}
+
+# Mount and export environment
+expect $prompt
+send $unmount_cmd
+
+expect $prompt
+send $mount_cmd
+
+expect $prompt
+send $export_cmd
+
+# Check if the argument is 'boot_recovery'
+if {[string match "boot_recovery" $stb_dir]} {
+    expect $prompt
+    send $corrupt_cmd
+    expect $prompt
+    send "reboot \n"
+    send "exit \n"
+} elseif {[string match "*.update" $software]} {
+    set chmod_cmd "chmod 755 $software\r"
+    set install_cmd "./$software\r"
+    
+    # Send chmod and install commands
+    expect $prompt
+    send $chmod_cmd
+    expect $prompt
+    send $install_cmd
+
+    # Check for the boot recovery message
+    expect {
+        "please put your box in boot recovery" {
+            send $corrupt_cmd
+            expect $prompt
+            send "reboot \n"
+        }
+        timeout {
+            puts "Install continuing without boot recovery request."
+        }
+    }
+
+    expect $prompt
+    send "echo c > /proc/sysrq-trigger \n"
+    expect $prompt
+    send "exit \n"
+} else {
+    # Otherwise, untar the software
+    if {[string length $software] > 0} {
+        set untar_cmd "tar -xvzf $software -C /mnt/MISC_HD\r"
+        expect $prompt
+        send $untar_cmd
+        expect $prompt
+        send "exit \n"
+    }
+}
+
+# Optionally mount NAND on Wally
+if {$mount_NAND == 1} {
+    expect $prompt
+    send "mount -t squashfs /dev/mtdblock3 /mnt/drivers\r"
+    expect $prompt
+    send "insmod /lib/modules/sdhci-brcmstb.ko\r"
+    expect $prompt
+    send "mount -t ext4 /dev/mmcblk0p1 /var/mnt/NAND\r"
+}
+
+interact

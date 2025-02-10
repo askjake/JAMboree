@@ -31,7 +31,10 @@ python.exe -m pip install --upgrade pip
 pip install -r requirements.txt
 
 echo Monitoring settops on network
-start /B cmd /C "python scripts\stb_search.py"
+REM start /B cmd /C "python scripts\stb_search.py"
+
+echo Checking Active JAMboree Version
+REM python versionControl.py
 
 REM Run the script
 echo Running JAMboree.py...

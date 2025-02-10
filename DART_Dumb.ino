@@ -71,6 +71,7 @@ void loop() {
 
 void parseInput(String input) {
   input.trim(); // Remove leading/trailing whitespace
+  Serial.println("Received input: " + input); // Debug print
 
   // Check for 'reset' command
   if (input == "reset") {
@@ -107,8 +108,10 @@ void parseInput(String input) {
       }
 
       Serial.print(remoteNum); // Print the remote number
+      Serial.print(keyCmdDown); 
+      Serial.println(keyCmdUp); 
       Serial.flush(); 
-      delay(5);
+      delay(2);
     }
   }
   // Check if the input matches the second format: remoteNum, buttonNum, action
@@ -141,7 +144,8 @@ void parseInput(String input) {
       }
     }
   } else {
-    Serial.println("Failed to parse input!"); // Debug print
+    Serial.print("Failed to parse input! "); // Debug print
+    Serial.println(input);
     Serial.flush();
   }
 }
@@ -204,7 +208,7 @@ int convertNumToPin(int remoteNum) {
 // Reset all remotes by toggling the RESET_PIN
 void resetRemotes() {
   digitalWrite(RESET_PIN, LOW); // Set RESET_PIN LOW to trigger reset
-  delay(250);  // Wait for 250 milliseconds
+  delay(500);  // Wait for 250 milliseconds
   digitalWrite(RESET_PIN, HIGH);  // Set RESET_PIN HIGH again
 }
 
